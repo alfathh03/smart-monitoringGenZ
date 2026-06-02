@@ -59,7 +59,11 @@ export default function ScannerPage() {
       const formData = new FormData();
       formData.append('receiptImage', file); 
 
-      const response = await axios.post('http://localhost:5000/api/ocr-receipt', formData, {
+      // PERBAIKAN: Gunakan Environment Variable Vite
+      // Kalau di Vercel dia akan pakai VITE_API_URL, kalau di lokal dia pakai localhost
+      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const response = await axios.post(`${BASE_URL}/api/ocr-receipt`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
