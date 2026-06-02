@@ -1,5 +1,8 @@
 Flask==3.0.0
-ultralytics==8.1.0
-easyocr==1.7.1
-opencv-python==4.9.0.80
-numpy==1.26.4
+flask-cors==4.0.0
+gunicorn==21.2.0
+Werkzeug==3.0.1
+opencv-python-headless
+easyocr
+ultralytics
+numpy

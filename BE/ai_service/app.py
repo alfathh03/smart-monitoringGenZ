@@ -4,9 +4,11 @@ import cv2
 import numpy as np
 import easyocr
 from flask import Flask, request, jsonify
+from flask_cors import CORS  
 from ultralytics import YOLO
 
 app = Flask(__name__)
+CORS(app) 
 
 # 1. INIT & LOAD MODEL SCANNER
 print("Membangunkan Sistem... Mohon tunggu!")
@@ -106,7 +108,7 @@ def get_insight():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # JALANKAN SERVER PYTHON
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    port = int(os.environ.get('PORT', 7860))
+    app.run(host='0.0.0.0', port=port, debug=False)

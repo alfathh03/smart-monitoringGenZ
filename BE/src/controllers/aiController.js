@@ -14,7 +14,7 @@ if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey);
 }
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'https://alfathnafis-ai-smartbudget.hf.space';
 
 const detectAnomaly = async (req, res) => {
   try {
@@ -99,4 +99,54 @@ const getFinancialInsight = async (req, res) => {
   }
 };
 
-module.exports = { detectAnomaly, processOCR, getFinancialInsight };
+const calculateMean = (data) => {
+    if (data.length === 0) return 0;
+    const sum = data.reduce((acc, val) => acc + val, 0);
+    return sum / data.length;
+};
+
+const calculateStandardDeviation = (data, mean) => {
+    if (data.length === 0) return 0;
+    const variance = data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / data.length;
+    return Math.sqrt(variance);
+};
+
+const checkAnomaly = async (req, res) => {
+    try {
+        const { current_transaction_amount, user_id } = req.body;
+
+        const historyTransactions = [50000, 45000, 55000, 60000, 48000]; 
+
+        if (historyTransactions.length < 3) {
+            return res.json({
+                is_anomaly: false,
+                message: "Data riwayat belum cukup untuk mendeteksi anomali."
+            });
+        }
+
+        const mean = calculateMean(historyTransactions);
+        const stdDev = calculateStandardDeviation(historyTransactions, mean);
+
+        let zScore = 0;
+        if (stdDev > 0) {
+            zScore = (current_transaction_amount - mean) / stdDev;
+        }
+
+        const isAnomaly = zScore > 2;
+
+        return res.json({
+            transaction_amount: current_transaction_amount,
+            mean_history: Math.round(mean),
+            z_score: parseFloat(zScore.toFixed(2)),
+            is_anomaly: isAnomaly,
+            message: isAnomaly 
+                ? "Peringatan: Pengeluaran ini bengkak dan di luar kebiasaanmu!" 
+                : "Pengeluaran masih dalam batas wajar."
+        });
+
+    } catch (error) {
+        return res.status(500).json({ error: "Gagal memproses analisis anomali" });
+    }
+};
+
+module.exports = { detectAnomaly, processOCR, getFinancialInsight, checkAnomaly };

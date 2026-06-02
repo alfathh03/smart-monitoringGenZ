@@ -29,7 +29,6 @@ app.listen(PORT, '0.0.0.0', async () => {
   if (connectRabbitMQ) {
     try {
       await connectRabbitMQ();
-      console.log('RabbitMQ berhasil disambungkan!');
     } catch (err) {
       console.error(err.message);
     }
