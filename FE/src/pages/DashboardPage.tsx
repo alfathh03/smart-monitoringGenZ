@@ -111,7 +111,8 @@ export default function DashboardPage() {
     .filter((c) => c.value > 0);
 
   const sourceData = ['e-wallet', 'mobile-banking', 'cash', 'debit-card', 'credit-card', 'transfer'].map((source) => ({
-    source: source.replace('-', ' '),
+    // PERBAIKAN 1: Tambahkan fallback string kosong sebelum dipanggil .replace
+    source: (source || '').replace('-', ' '),
     amount: monthTransactions
       .filter((t) => t.source === source && t.type === 'expense')
       .reduce((s, t) => s + Number(t.amount), 0),
@@ -236,11 +237,13 @@ export default function DashboardPage() {
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                   tx.type === 'expense' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'
                 }`}>
-                  {SOURCE_ICONS[tx.source] || <CreditCard className="w-4 h-4" />}
+                  {/* PERBAIKAN 2: Tambahkan pengaman pada tx.source */}
+                  {SOURCE_ICONS[tx.source || 'cash'] || <CreditCard className="w-4 h-4" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={clsx("text-sm truncate font-medium", isLight ? "text-slate-800" : "text-white")}>{tx.description || 'Transaction'}</p>
-                  <p className={clsx("text-xs", isLight ? "text-slate-500" : "text-slate-400")}>{format(new Date(tx.date), 'MMM d')} &middot; {tx.source.replace('-', ' ')}</p>
+                  {/* PERBAIKAN 3: Gunakan ?. agar tidak meledak kalau tx.source undefined */}
+                  <p className={clsx("text-xs", isLight ? "text-slate-500" : "text-slate-400")}>{format(new Date(tx.date), 'MMM d')} &middot; {tx.source?.replace('-', ' ') || 'Unknown'}</p>
                 </div>
                 <span className={`text-sm font-semibold ${tx.type === 'expense' ? 'text-red-500' : 'text-emerald-500'}`}>
                   {tx.type === 'expense' ? '-' : '+'}{formatCurrency(Number(tx.amount))}
@@ -254,9 +257,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {
-        
-      }
       {alerts.filter((a) => !a.is_resolved).length > 0 && (
         <div className={clsx("rounded-2xl border p-6 transition-all duration-500", isLight ? "bg-white border-pink-100 shadow-sm" : `${activeStyle.sidebarBg} border-white/5`)}>
           <h3 className={clsx("text-sm font-semibold mb-4 flex items-center gap-2", isLight ? "text-slate-800" : "text-white")}>
@@ -277,7 +277,8 @@ export default function DashboardPage() {
                 }`} />
                 <div className="flex-1">
                   <p className={clsx("text-sm font-medium", isLight ? "text-slate-800" : "text-white")}>{alert.message}</p>
-                  <p className={clsx("text-xs mt-0.5", isLight ? "text-slate-500" : "text-slate-400")}>{alert.alert_type.replace('_', ' ')} &middot; {format(new Date(alert.created_at), 'MMM d, HH:mm')}</p>
+                  {/* PERBAIKAN 4: Tambahkan pengaman pada alert.alert_type */}
+                  <p className={clsx("text-xs mt-0.5", isLight ? "text-slate-500" : "text-slate-400")}>{alert.alert_type?.replace('_', ' ') || 'Unknown'} &middot; {format(new Date(alert.created_at), 'MMM d, HH:mm')}</p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                   alert.severity === 'high' ? 'bg-red-500/10 text-red-500' :
