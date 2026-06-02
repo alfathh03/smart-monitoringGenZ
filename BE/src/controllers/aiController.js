@@ -1,21 +1,27 @@
 require('dotenv').config(); 
-
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws');
 
-// 1. DEKLARASI SUPABASE 
+// 1. KONFIGURASI SUPABASE (DENGAN TRANSPORT WEBSOCKET)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 let supabase = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-  console.log("PERINGATAN: SUPABASE_URL atau KEY tidak ditemukan di file .env!");
-}
 
-// 1. ENGINE ANOMALI (Z-SCORE)
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    realtime: {
+      transport: WebSocket 
+    }
+  });
+} else {
+  console.log("PERINGATAN: Supabase config tidak lengkap.");
+}
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
+
+// 2. ENGINE ANOMALI (Z-SCORE)
 const detectAnomaly = async (req, res) => {
   try {
     const { transactions } = req.body;
@@ -49,116 +55,60 @@ const detectAnomaly = async (req, res) => {
       }
     });
 
-    res.status(200).json({
-      success: true,
-      anomalies,
-      model: "Z-Score Inference Engine",
-      stats: { total: transactions.length }
-    });
+    res.status(200).json({ success: true, anomalies, model: "Z-Score Inference Engine" });
   } catch (error) {
-    console.error("Error di Anomaly Detect:", error);
+    console.error("Error Anomaly:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 2. OCR SCANNER (Koneksi Python + Upload ke Supabase Storage)
+// 3. OCR SCANNER
 const processOCR = async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false, message: "Tidak ada gambar struk yang di-upload!" });
-  }
+  if (!req.file) return res.status(400).json({ success: false, message: "File tidak ditemukan" });
 
   try {
-    console.log("1. Mengirim gambar struk ke AI Python...");
-    
     const form = new FormData();
     form.append('image', fs.createReadStream(req.file.path), req.file.originalname);
 
-    const pythonResponse = await axios.post('http://127.0.0.1:5001/api/scan', form, {
+    // Tembak ke Python AI (Pakai variabel AI_SERVICE_URL)
+    const pythonResponse = await axios.post(`${AI_SERVICE_URL}/api/scan`, form, {
       headers: { ...form.getHeaders() }
     });
 
     const aiData = pythonResponse.data;
-    
-    console.log("2. OCR Sukses. Mengunggah gambar ke Supabase Storage...");
-    
     let receiptUrl = null;
     
     if (supabase) {
       const fileBuffer = fs.readFileSync(req.file.path);
       const fileName = `receipts/${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`; 
+      const { error: uploadError } = await supabase.storage.from('receipts').upload(fileName, fileBuffer);
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('receipts')
-        .upload(fileName, fileBuffer, {
-          contentType: req.file.mimetype,
-          upsert: false
-        });
-
-      if (uploadError) {
-        console.error("Peringatan: Gagal upload gambar ke Supabase:", uploadError.message);
-      } else {
-        const { data: publicUrlData } = supabase.storage
-          .from('receipts')
-          .getPublicUrl(fileName);
-          
-        receiptUrl = publicUrlData.publicUrl;
-        console.log("3. Gambar berhasil diamankan di Cloud!");
+      if (!uploadError) {
+        receiptUrl = supabase.storage.from('receipts').getPublicUrl(fileName).data.publicUrl;
       }
-    } else {
-      console.log("Upload ke Supabase dibatalkan karena config di .env belum benar.");
     }
 
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-    res.status(200).json({
-      success: true,
-      merchant_name: aiData.merchant_name, 
-      total_amount: aiData.total_amount,   
-      payment_method: aiData.payment_method,
-      receipt_url: receiptUrl 
-    });
-
+    res.status(200).json({ success: true, ...aiData, receipt_url: receiptUrl });
   } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    console.error("Gagal memproses AI / Upload:", error.message);
-    res.status(500).json({ success: false, message: "Gagal memproses struk dengan AI" });
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("OCR Error:", error.message);
+    res.status(500).json({ success: false, message: "Gagal memproses struk" });
   }
 };
 
-// 3. AI INSIGHT GENERATOR (Koneksi ke Python)
+// 4. AI INSIGHT GENERATOR
 const getFinancialInsight = async (req, res) => {
   try {
     const { total, avg_pengeluaran } = req.body;
-
-    if (total === undefined || avg_pengeluaran === undefined) {
-      return res.status(400).json({ success: false, message: "Butuh data total dan avg_pengeluaran" });
-    }
-
-    console.log(`Meminta Insight ke AI untuk Total: ${total}, Rata-rata: ${avg_pengeluaran}`);
-
-    // Tembak ke AI Python (Rule-Based Endpoint)
-    const pythonResponse = await axios.post('http://127.0.0.1:5001/api/insight', {
-      total: total,
-      avg_pengeluaran: avg_pengeluaran
-    });
-
-    res.status(200).json({
-      success: true,
-      insight: pythonResponse.data.insight_message
-    });
-
+    const pythonResponse = await axios.post(`${AI_SERVICE_URL}/api/insight`, { total, avg_pengeluaran });
+    
+    res.status(200).json({ success: true, insight: pythonResponse.data.insight_message });
   } catch (error) {
-    console.error("Gagal get insight dari Python:", error.message);
-    res.status(500).json({ success: false, message: "Server AI sedang tidur atau terputus." });
+    console.error("Insight Error:", error.message);
+    res.status(500).json({ success: false, message: "Gagal ambil insight" });
   }
 };
 
-module.exports = {
-  detectAnomaly,
-  processOCR,
-  getFinancialInsight 
-};
+module.exports = { detectAnomaly, processOCR, getFinancialInsight };
