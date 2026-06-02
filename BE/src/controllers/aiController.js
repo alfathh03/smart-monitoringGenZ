@@ -1,27 +1,21 @@
-require('dotenv').config(); 
+require('dotenv').config();
+global.WebSocket = require('ws');
+
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
-const WebSocket = require('ws');
 
-// 1. KONFIGURASI SUPABASE (DENGAN TRANSPORT WEBSOCKET)
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 let supabase = null;
 
 if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    realtime: {
-      transport: WebSocket 
-    }
-  });
-} else {
-  console.log("PERINGATAN: Supabase config tidak lengkap.");
+  supabase = createClient(supabaseUrl, supabaseKey);
 }
+
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5001';
 
-// 2. ENGINE ANOMALI (Z-SCORE)
 const detectAnomaly = async (req, res) => {
   try {
     const { transactions } = req.body;
@@ -57,12 +51,10 @@ const detectAnomaly = async (req, res) => {
 
     res.status(200).json({ success: true, anomalies, model: "Z-Score Inference Engine" });
   } catch (error) {
-    console.error("Error Anomaly:", error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 3. OCR SCANNER
 const processOCR = async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: "File tidak ditemukan" });
 
@@ -70,7 +62,6 @@ const processOCR = async (req, res) => {
     const form = new FormData();
     form.append('image', fs.createReadStream(req.file.path), req.file.originalname);
 
-    // Tembak ke Python AI (Pakai variabel AI_SERVICE_URL)
     const pythonResponse = await axios.post(`${AI_SERVICE_URL}/api/scan`, form, {
       headers: { ...form.getHeaders() }
     });
@@ -93,12 +84,10 @@ const processOCR = async (req, res) => {
     res.status(200).json({ success: true, ...aiData, receipt_url: receiptUrl });
   } catch (error) {
     if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error("OCR Error:", error.message);
     res.status(500).json({ success: false, message: "Gagal memproses struk" });
   }
 };
 
-// 4. AI INSIGHT GENERATOR
 const getFinancialInsight = async (req, res) => {
   try {
     const { total, avg_pengeluaran } = req.body;
@@ -106,7 +95,6 @@ const getFinancialInsight = async (req, res) => {
     
     res.status(200).json({ success: true, insight: pythonResponse.data.insight_message });
   } catch (error) {
-    console.error("Insight Error:", error.message);
     res.status(500).json({ success: false, message: "Gagal ambil insight" });
   }
 };
