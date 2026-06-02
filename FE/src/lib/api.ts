@@ -87,18 +87,17 @@ export const profilesApi = {
     api.get(`/profiles?select=id,full_name,points&order=points.desc&limit=10`),
 };
 
-// URL Backend Express & Python (Siap untuk Deployment)
-const expressBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const expressBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export const customBackendApi = {
   anomalyDetect: (transactions: unknown[]) => {
-    return axios.post(`${expressBaseUrl}/anomaly-detect`, { transactions });
+    return axios.post(`${expressBaseUrl}/api/anomaly-detect`, { transactions });
   },
   ocrReceipt: (imageUrl: string, rawText: string) => {
-    return axios.post(`${expressBaseUrl}/ocr-receipt`, { image_url: imageUrl, raw_text: rawText });
+    return axios.post(`${expressBaseUrl}/api/ocr-receipt`, { image_url: imageUrl, raw_text: rawText });
   },
   generateInsight: (total: number, avg_pengeluaran: number) => {
-    return axios.post(`${expressBaseUrl}/generate-insight`, { total, avg_pengeluaran });
+    return axios.post(`${expressBaseUrl}/api/generate-insight`, { total, avg_pengeluaran });
   }
 };
 
