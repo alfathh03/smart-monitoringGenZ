@@ -21,6 +21,14 @@ app.use(express.json());
 app.use('/api', apiRoutes);
 app.use('/api/profiles', profileRoutes);
 
+app.get('/', (req, res) => {
+  res.status(200).send('Server is running and healthy!');
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Jalankan Server
 app.listen(PORT, async () => {
   console.log(`Server Back-End berjalan di http://localhost:${PORT}`);
