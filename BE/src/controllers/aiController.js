@@ -15,9 +15,7 @@ if (supabaseUrl && supabaseKey) {
   console.log("PERINGATAN: SUPABASE_URL atau KEY tidak ditemukan di file .env!");
 }
 
-// ========================================================
 // 1. ENGINE ANOMALI (Z-SCORE)
-// ========================================================
 const detectAnomaly = async (req, res) => {
   try {
     const { transactions } = req.body;
@@ -63,9 +61,7 @@ const detectAnomaly = async (req, res) => {
   }
 };
 
-// ========================================================
 // 2. OCR SCANNER (Koneksi Python + Upload ke Supabase Storage)
-// ========================================================
 const processOCR = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: "Tidak ada gambar struk yang di-upload!" });
@@ -77,17 +73,16 @@ const processOCR = async (req, res) => {
     const form = new FormData();
     form.append('image', fs.createReadStream(req.file.path), req.file.originalname);
 
-    const pythonResponse = await axios.post('http://127.0.0.1:5001/api/scan-receipt', form, {
+    const pythonResponse = await axios.post('http://127.0.0.1:5001/api/scan', form, {
       headers: { ...form.getHeaders() }
     });
 
-    const aiData = pythonResponse.data.data;
+    const aiData = pythonResponse.data;
     
     console.log("2. OCR Sukses. Mengunggah gambar ke Supabase Storage...");
     
     let receiptUrl = null;
     
-    // 2. MEMANGGIL VARIABEL SUPABASE YANG SUDAH DIDEKLARASIKAN
     if (supabase) {
       const fileBuffer = fs.readFileSync(req.file.path);
       const fileName = `receipts/${Date.now()}_${req.file.originalname.replace(/\s+/g, '_')}`; 
@@ -119,8 +114,8 @@ const processOCR = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      merchant_name: aiData.merchant,
-      total_amount: aiData.total,
+      merchant_name: aiData.merchant_name, 
+      total_amount: aiData.total_amount,   
       payment_method: aiData.payment_method,
       receipt_url: receiptUrl 
     });
@@ -134,7 +129,36 @@ const processOCR = async (req, res) => {
   }
 };
 
+// 3. AI INSIGHT GENERATOR (Koneksi ke Python)
+const getFinancialInsight = async (req, res) => {
+  try {
+    const { total, avg_pengeluaran } = req.body;
+
+    if (total === undefined || avg_pengeluaran === undefined) {
+      return res.status(400).json({ success: false, message: "Butuh data total dan avg_pengeluaran" });
+    }
+
+    console.log(`Meminta Insight ke AI untuk Total: ${total}, Rata-rata: ${avg_pengeluaran}`);
+
+    // Tembak ke AI Python (Rule-Based Endpoint)
+    const pythonResponse = await axios.post('http://127.0.0.1:5001/api/insight', {
+      total: total,
+      avg_pengeluaran: avg_pengeluaran
+    });
+
+    res.status(200).json({
+      success: true,
+      insight: pythonResponse.data.insight_message
+    });
+
+  } catch (error) {
+    console.error("Gagal get insight dari Python:", error.message);
+    res.status(500).json({ success: false, message: "Server AI sedang tidur atau terputus." });
+  }
+};
+
 module.exports = {
   detectAnomaly,
-  processOCR
+  processOCR,
+  getFinancialInsight 
 };

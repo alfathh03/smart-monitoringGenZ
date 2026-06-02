@@ -25,6 +25,15 @@ const AUTO_CATEGORIES: Record<string, string[]> = {
   'Health': ['pharmacy', 'doctor', 'hospital', 'clinic', 'medicine', 'health', 'obat', 'dokter'],
 };
 
+const INCOME_CATEGORIES = [
+  'Gaji',
+  'Sangu dari Ortu',
+  'Freelance / Project',
+  'Bonus',
+  'Investasi',
+  'DLL (Lainnya)'
+];
+
 function autoCategorize(description: string): string | null {
   const lower = description.toLowerCase();
   for (const [catName, keywords] of Object.entries(AUTO_CATEGORIES)) {
@@ -234,7 +243,6 @@ export default function TransactionsPage() {
   );
 }
 
-// ... Kodingan TransactionForm ke bawah DIBIARKAN SAMA ...
 function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, onError }: any) {
   const { activeStyle, isLight } = useTheme() as any;
   const editingTx = editingId ? transactions.find((t: any) => t.id === editingId) : null;
@@ -250,7 +258,7 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
 
   const handleDescriptionChange = (val: string) => {
     setDescription(val);
-    if (!editingTx && val.length > 2) {
+    if (!editingTx && val.length > 2 && type === 'expense') {
       const detectedCategory = autoCategorize(val);
       if (detectedCategory) {
         setCategory(detectedCategory);
@@ -299,8 +307,20 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className={clsx("flex rounded-xl p-1", isLight ? "bg-slate-100" : "bg-slate-800/50")}>
-            <button type="button" onClick={() => setType('expense')} className={clsx('flex-1 py-2 rounded-lg text-sm font-medium transition-all', type === 'expense' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-500')}>Expense</button>
-            <button type="button" onClick={() => setType('income')} className={clsx('flex-1 py-2 rounded-lg text-sm font-medium transition-all', type === 'income' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-500')}>Income</button>
+            <button 
+              type="button" 
+              onClick={() => { setType('expense'); setCategory(''); }} 
+              className={clsx('flex-1 py-2 rounded-lg text-sm font-medium transition-all', type === 'expense' ? 'bg-red-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-500')}
+            >
+              Expense
+            </button>
+            <button 
+              type="button" 
+              onClick={() => { setType('income'); setCategory(''); }} 
+              className={clsx('flex-1 py-2 rounded-lg text-sm font-medium transition-all', type === 'income' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-500')}
+            >
+              Income
+            </button>
           </div>
 
           <div>
@@ -341,9 +361,17 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
             <label className={labelClass}>Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
               <option value="">Uncategorized</option>
-              {Object.keys(AUTO_CATEGORIES).map((catName) => (
-                <option key={catName} value={catName}>{catName}</option>
-              ))}
+              
+              {/* Logika Dropdown Dinamis */}
+              {type === 'expense' 
+                ? Object.keys(AUTO_CATEGORIES).map((catName) => (
+                    <option key={catName} value={catName}>{catName}</option>
+                  ))
+                : INCOME_CATEGORIES.map((catName) => (
+                    <option key={catName} value={catName}>{catName}</option>
+                  ))
+              }
+              
             </select>
           </div>
 

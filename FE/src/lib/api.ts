@@ -4,7 +4,6 @@ import { supabase } from './supabase';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Konfigurasi utama untuk CRUD Database ke Supabase
 const api = axios.create({
   baseURL: `${supabaseUrl}/rest/v1`,
   headers: {
@@ -22,13 +21,10 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// 👇 TAMBAHAN BARU: SENSOR ERROR PINTAR
-// Fitur ini akan membongkar alasan kenapa Supabase menolak menyimpan data Insights-mu!
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Akan mencetak pesan merah tebal di Console browser-mu
-    console.error('🚨 BONGKAR ERROR SUPABASE:', error.response?.data || error.message);
+    console.error('BONGKAR ERROR SUPABASE:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );
@@ -42,7 +38,6 @@ export const transactionsApi = {
   delete: (id: string) => api.delete(`/transactions?id=eq.${id}`),
 };
 
-// Categories (Dibiarkan untuk mencegah error di halaman Dashboard lama)
 export const categoriesApi = {
   list: (userId: string) => api.get(`/categories?user_id=eq.${userId}`),
   create: (data: unknown) => api.post('/categories', data),
@@ -92,10 +87,9 @@ export const profilesApi = {
     api.get(`/profiles?select=id,full_name,points&order=points.desc&limit=10`),
 };
 
-// URL Backend Express
-const expressBaseUrl = 'http://localhost:5000/api';
+// URL Backend Express & Python (Siap untuk Deployment)
+const expressBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Panggilan khusus ke server Express untuk AI dan OCR
 export const customBackendApi = {
   anomalyDetect: (transactions: unknown[]) => {
     return axios.post(`${expressBaseUrl}/anomaly-detect`, { transactions });
@@ -103,6 +97,9 @@ export const customBackendApi = {
   ocrReceipt: (imageUrl: string, rawText: string) => {
     return axios.post(`${expressBaseUrl}/ocr-receipt`, { image_url: imageUrl, raw_text: rawText });
   },
+  generateInsight: (total: number, avg_pengeluaran: number) => {
+    return axios.post(`${expressBaseUrl}/generate-insight`, { total, avg_pengeluaran });
+  }
 };
 
 export default api;

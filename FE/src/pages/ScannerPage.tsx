@@ -42,9 +42,6 @@ export default function ScannerPage() {
 
   useEffect(() => { fetchReceipts(); }, [fetchReceipts]);
 
-  // ==========================================
-  // FUNGSI INTI: MENGIRIM GAMBAR KE AI BACK-END
-  // ==========================================
   const handleFile = async (file: File) => {
     setUploading(true); 
     setPreview(null); 
@@ -68,7 +65,6 @@ export default function ScannerPage() {
 
       const aiData = response.data;
 
-      // 2. SUDAH DIUBAH JADI image_url
       setParsed({ 
         merchant: aiData.merchant_name || 'Tidak Diketahui', 
         total: aiData.total_amount || 0, 
@@ -94,7 +90,6 @@ export default function ScannerPage() {
   const createTransactionFromReceipt = async () => {
     if (!parsed || !user) return;
     try {
-      // 3. SUDAH DIUBAH JADI image_url
       await transactionsApi.create({ 
         user_id: user.id, 
         type: 'expense', 
@@ -104,6 +99,15 @@ export default function ScannerPage() {
         date: parsed.date, 
         is_ocr: true,
         image_url: parsed.image_url 
+      });
+
+      await receiptsApi.create({
+        user_id: user.id,
+        merchant_name: parsed.merchant,
+        total_amount: parsed.total,
+        image_url: parsed.image_url || null,
+        ocr_status: 'processed',             
+        transaction_date: parsed.date     
       });
       
       setCreated(true);
@@ -154,16 +158,13 @@ export default function ScannerPage() {
         </div>
       </div>
 
-      {/* AREA HASIL PREVIEW & PARSED DATA */}
       {preview && parsed && !processing && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in fade-in zoom-in duration-300">
           
-          {/* Kolom Kiri: Tampilkan Gambar Struk */}
           <div className={clsx("rounded-2xl border p-2 flex justify-center", isLight ? "bg-white border-pink-100 shadow-sm" : `${activeStyle.sidebarBg} border-white/5`)}>
              <img src={preview} alt="Struk Upload" className="max-h-64 object-contain rounded-xl" />
           </div>
 
-          {/* Kolom Kanan: Hasil AI */}
           <div className={clsx("rounded-2xl border p-6 flex flex-col justify-center", isLight ? "bg-white border-pink-100 shadow-sm" : `${activeStyle.sidebarBg} border-white/5`)}>
              <h3 className={clsx("text-sm font-semibold mb-4", isLight ? "text-slate-800" : "text-white")}>Parsed Data by AI</h3>
              

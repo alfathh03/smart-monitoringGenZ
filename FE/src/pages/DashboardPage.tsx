@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { transactionsApi, categoriesApi, anomalyAlertsApi } from '../lib/api';
-import { useTheme } from '../context/ThemeContext'; // IMPORT THEME
+import { useTheme } from '../context/ThemeContext'; 
+import { supabase } from '../lib/supabase'; 
 import type { Transaction, Category, AnomalyAlert } from '../types';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -11,8 +12,8 @@ import {
   TrendingDown, TrendingUp, ShieldAlert, Wallet, ArrowUpRight,
   CreditCard, Smartphone, Banknote
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, isWithinInterval, subDays } from 'date-fns';
-import clsx from 'clsx'; // IMPORT CLSX
+import { format, startOfMonth, endOfMonth, isWithinInterval, subDays, isSameDay } from 'date-fns';
+import clsx from 'clsx'; 
 
 const SOURCE_ICONS: Record<string, React.ReactNode> = {
   'e-wallet': <Smartphone className="w-4 h-4" />,
@@ -27,34 +28,56 @@ const CHART_COLORS = ['#10b981', '#06b6d4', '#f59e0b', '#ef4444', '#8b5cf6', '#e
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { activeStyle, isLight } = useTheme() as any; // AMBIL TEMA
+  const { activeStyle, isLight } = useTheme() as any; 
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [alerts, setAlerts] = useState<AnomalyAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = useCallback(async (isSilent = false) => {
+    if (!user) return;
+    if (!isSilent) setLoading(true); 
+    
+    try {
+      const [txRes, catRes, alertRes] = await Promise.all([
+        transactionsApi.list(user.id),
+        categoriesApi.list(user.id),
+        anomalyAlertsApi.list(user.id),
+      ]);
+      setTransactions(txRes.data || []);
+      setCategories(catRes.data || []);
+      setAlerts(alertRes.data || []);
+    } catch (err) {
+      console.error('Failed to fetch dashboard data:', err);
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   useEffect(() => {
     if (!user) return;
-    const userId = user.id;
-    async function fetchData() {
-      try {
-        const [txRes, catRes, alertRes] = await Promise.all([
-          transactionsApi.list(userId),
-          categoriesApi.list(userId),
-          anomalyAlertsApi.list(userId),
-        ]);
-        setTransactions(txRes.data || []);
-        setCategories(catRes.data || []);
-        setAlerts(alertRes.data || []);
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [user]);
+
+    const channel = supabase
+      .channel('realtime-dashboard')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          console.log('⚡ Ada transaksi baru masuk secara Real-Time!', payload);
+          fetchData(true); 
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, fetchData]);
 
   const now = new Date();
   const monthStart = startOfMonth(now);
@@ -65,12 +88,12 @@ export default function DashboardPage() {
 
   const totalExpense = monthTransactions.filter((t) => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
   const totalIncome = monthTransactions.filter((t) => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-  const anomalyCount = monthTransactions.filter((t) => t.is_anomaly).length;
+  
+  const anomalyCount = alerts.filter((a) => !a.is_resolved).length;
 
   const dailyData = Array.from({ length: 30 }, (_, i) => {
     const date = subDays(now, 29 - i);
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const dayTx = transactions.filter((t) => (t.date || '').startsWith(dateStr) && t.type === 'expense');
+    const dayTx = transactions.filter((t) => t.date && isSameDay(new Date(t.date), date) && t.type === 'expense');
     return {
       date: format(date, 'MMM d'),
       expense: dayTx.reduce((s, t) => s + Number(t.amount), 0),
@@ -81,7 +104,7 @@ export default function DashboardPage() {
     .filter((c) => c.type === 'expense')
     .map((cat) => {
       const total = monthTransactions
-        .filter((t) => t.category === cat.name && t.type === 'expense') // PERBAIKAN: gunakan cat.name
+        .filter((t) => t.category === cat.name && t.type === 'expense') 
         .reduce((s, t) => s + Number(t.amount), 0);
       return { name: cat.name, value: total, color: cat.color };
     })
@@ -231,7 +254,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Active Alerts */}
+      {
+        
+      }
       {alerts.filter((a) => !a.is_resolved).length > 0 && (
         <div className={clsx("rounded-2xl border p-6 transition-all duration-500", isLight ? "bg-white border-pink-100 shadow-sm" : `${activeStyle.sidebarBg} border-white/5`)}>
           <h3 className={clsx("text-sm font-semibold mb-4 flex items-center gap-2", isLight ? "text-slate-800" : "text-white")}>
@@ -289,7 +314,7 @@ function StatCard({ title, value, icon, color, isCount, isLight, activeStyle }: 
     <div className={clsx(
       "bg-gradient-to-br border rounded-2xl p-5 transition-transform hover:scale-[1.02]",
       colorMap[color],
-      isLight && "bg-white shadow-sm border-pink-100" // Tambahan agar bagus di light mode
+      isLight && "bg-white shadow-sm border-pink-100" 
     )}>
       <div className="flex items-center justify-between mb-3">
         <span className={clsx("text-xs font-medium uppercase tracking-wider", isLight ? "text-slate-500" : "text-slate-400")}>{title}</span>
@@ -305,6 +330,5 @@ function StatCard({ title, value, icon, color, isCount, isLight, activeStyle }: 
 }
 
 function formatCurrency(amount: number): string {
-  // SUDAH DIUBAH KE FORMAT RUPIAH
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 }
