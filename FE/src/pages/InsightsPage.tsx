@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { transactionsApi, insightsApi } from '../lib/api';
+import { transactionsApi, insightsApi, customBackendApi } from '../lib/api'; 
 import { useTheme } from '../context/ThemeContext';
 import type { Transaction, Insight } from '../types';
 import {
-  TrendingDown, TrendingUp, AlertTriangle, Target, PiggyBank, Zap, RefreshCw, CheckCircle, AlertCircle
+  TrendingDown, TrendingUp, AlertTriangle, Target, PiggyBank, Zap, RefreshCw, CheckCircle, AlertCircle, Brain
 } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import {
@@ -78,10 +78,16 @@ export default function InsightsPage() {
 
   const generateInsights = async () => {
     if (!user) return;
-    setGenerating(true);
+    
+    if (transactions.length === 0) {
+      setModalState({ type: 'warning', title: 'Belum Ada Data', message: 'Catat pengeluaran minimal satu kali agar AI bisa menganalisa datamu!' });
+      return;
+    }
 
+    setGenerating(true);
     const newInsights: any[] = [];
 
+    // 1. INSIGHT LOKAL (Kategori & Tabungan)
     const expenseByCategory = uniqueCategories.map((catName) => ({
       name: catName,
       total: monthTx.filter((t) => (t.category || 'Uncategorized') === catName && t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0),
@@ -97,14 +103,6 @@ export default function InsightsPage() {
           title: 'Pengeluaran Kategori Terlalu Besar!',
           message: `${topCat.name} menyedot ${pct}% dari total pengeluaranmu. Hati-hati, diversifikasikan budget-mu!`,
           severity: 'warning',
-        });
-      } else {
-        newInsights.push({
-          user_id: user.id,
-          insight_type: 'spending_pattern',
-          title: 'Distribusi Pengeluaran Sehat',
-          message: `Pengeluaran terbesarmu ada di ${topCat.name} (${pct}%). Ini masih dalam batas aman.`,
-          severity: 'info',
         });
       }
     }
@@ -130,21 +128,48 @@ export default function InsightsPage() {
       }
     }
 
-    if (newInsights.length === 0) {
+    // 2. INSIGHT AI (Tembak ke Python via Node.js)
+    try {
+      const expenses = transactions.filter(t => t.type === 'expense');
+      const pastExpenses = expenses.filter(t => !isWithinInterval(new Date(t.date || new Date()), { start: monthStart, end: monthEnd }));
+      
+      let avgPast = 0;
+      if (pastExpenses.length > 0) {
+        const totalPast = pastExpenses.reduce((sum, t) => sum + Number(t.amount), 0);
+        avgPast = totalPast / (pastExpenses.length || 1); 
+        avgPast = avgPast * (monthTx.filter(t => t.type === 'expense').length || 1); 
+      } else {
+        avgPast = totalExpense > 0 ? totalExpense * 0.7 : 0; 
+      }
+
+      // Tembak API Node.js yang meneruskan ke Python
+      const res = await customBackendApi.generateInsight(totalExpense, avgPast);
+      const aiMessage = res.data.insight;
+      
+      const isWarning = aiMessage.toLowerCase().includes('kurangi') || aiMessage.toLowerCase().includes('tinggi');
+
       newInsights.push({
         user_id: user.id,
-        insight_type: 'general_review',
-        title: 'Kondisi Keuangan Stabil',
-        message: 'Tidak ada pengeluaran ekstrem yang terdeteksi. Sistem melihat keuanganmu cukup terkendali bulan ini.',
-        severity: 'info',
+        insight_type: 'ai_analysis',
+        title: 'Analisa AI Cerdas',
+        message: aiMessage,
+        severity: isWarning ? 'warning' : 'info',
       });
+      
+    } catch (error) {
+      console.error("Gagal mendapatkan AI Insight:", error);
     }
 
-    try {
-      await insightsApi.create(newInsights);
-      setModalState({ type: 'success', title: 'Analisa Selesai!', message: 'AI telah berhasil membuat laporan keuangan terbarumu. Silakan cek di bawah.' });
-    } catch (err) {
-      setModalState({ type: 'error', title: 'Gagal', message: 'Gagal menyimpan hasil analisa ke database.' });
+    // 3. SIMPAN KE DATABASE
+    if (newInsights.length > 0) {
+      try {
+        await insightsApi.create(newInsights);
+        setModalState({ type: 'success', title: 'Analisa Selesai!', message: 'AI telah berhasil membuat laporan keuangan terbarumu. Silakan cek di bawah.' });
+      } catch (err) {
+        setModalState({ type: 'error', title: 'Gagal', message: 'Gagal menyimpan hasil analisa ke database.' });
+      }
+    } else {
+      setModalState({ type: 'success', title: 'Kondisi Stabil', message: 'Semua aman! Pengeluaran normal dan tidak ada anomali yang perlu dikhawatirkan.' });
     }
 
     setGenerating(false);
@@ -256,14 +281,16 @@ export default function InsightsPage() {
             )}>
               <div className="flex items-start gap-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  insight.insight_type === 'ai_analysis' ? 'bg-indigo-500/10 text-indigo-500' :
                   insight.severity === 'critical' ? 'bg-red-500/10 text-red-500' :
                   insight.severity === 'warning' ? 'bg-amber-500/10 text-amber-500' : 'bg-cyan-500/10 text-cyan-500'
                 }`}>
-                  <AlertTriangle className="w-5 h-5" />
+                  {insight.insight_type === 'ai_analysis' ? <Brain className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      insight.insight_type === 'ai_analysis' ? 'bg-indigo-500/10 text-indigo-500' :
                       insight.severity === 'critical' ? 'bg-red-500/10 text-red-500' :
                       insight.severity === 'warning' ? 'bg-amber-500/10 text-amber-500' : 'bg-cyan-500/10 text-cyan-500'
                     }`}>
@@ -296,6 +323,11 @@ export default function InsightsPage() {
               {modalState.type === 'error' && (
                 <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-red-500 shadow-inner">
                   <AlertCircle className="w-8 h-8" />
+                </div>
+              )}
+               {modalState.type === 'warning' && (
+                <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 shadow-inner">
+                  <AlertTriangle className="w-8 h-8" />
                 </div>
               )}
             </div>

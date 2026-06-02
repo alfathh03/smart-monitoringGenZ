@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// 1. TAMBAHKAN MULTER DI SINI (Satpam khusus penangkap file)
+// 1. TAMBAHKAN MULTER
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' }); 
 
@@ -25,5 +25,7 @@ router.post('/transactions', validateTransaction, transactionController.addTrans
 router.post('/anomaly-detect', aiController.detectAnomaly);
 
 router.post('/ocr-receipt', upload.single('receiptImage'), aiController.processOCR);
+
+router.post('/generate-insight', aiController.getFinancialInsight);
 
 module.exports = router;

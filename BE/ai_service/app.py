@@ -1,90 +1,112 @@
+import os
+import re
+import cv2
+import numpy as np
+import easyocr
 from flask import Flask, request, jsonify
 from ultralytics import YOLO
-import easyocr
-import os
-import cv2
-import traceback
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-print("Memuat Model AI... Harap tunggu...")
+# 1. INIT & LOAD MODEL SCANNER
+print("Membangunkan Sistem... Mohon tunggu!")
+
+# Load Model YOLO (Scanner)
 try:
-    model = YOLO("best.pt") 
-    print("Model YOLO Siap!")
+    yolo_model = YOLO("best.pt")
+    print("Model YOLO (best.pt) siap!")
 except Exception as e:
-    print("WARNING: File best.pt belum ada! Server tetap nyala, tapi belum bisa scan.")
-    model = None
+    print(f"Peringatan: Model YOLO (best.pt) tidak ditemukan. {e}")
 
-reader = easyocr.Reader(['en', 'id'])
-print("Model EasyOCR Siap!")
+# Load EasyOCR (Scanner)
+reader = easyocr.Reader(['id', 'en'], gpu=False) 
+print("EasyOCR siap!")
 
-os.makedirs("temp_uploads", exist_ok=True)
-
-@app.route('/api/scan-receipt', methods=['POST'])
+# 2. ENDPOINT 1: SCANNER STRUK (YOLO + OCR)
+@app.route('/api/scan', methods=['POST'])
 def scan_receipt():
     if 'image' not in request.files:
-        return jsonify({"error": "Tidak ada gambar yang dikirim"}), 400
-    
+        return jsonify({"error": "Tidak ada file gambar yang dikirim!"}), 400
+
     file = request.files['image']
-    filename = secure_filename(file.filename)
-    filepath = os.path.join("temp_uploads", filename)
-    file.save(filepath)
+    
+    npimg = np.frombuffer(file.read(), np.uint8)
+    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+    
+    results = reader.readtext(img)
+    extracted_text = [text for (bbox, text, prob) in results]
+    full_text = "\n".join(extracted_text)
+    
+    merchant_name = extracted_text[0] if len(extracted_text) > 0 else "Tidak Diketahui"
+
+    tanggal_match = re.search(r'\d{2}[-/]\d{2}[-/]\d{4}', full_text)
+    tanggal = tanggal_match.group() if tanggal_match else None
+
+    total_amount = 0
+    for i, line in enumerate(extracted_text):
+        if "total" in line.lower():
+            angka_sama = re.sub(r'[^\d]', '', line.lower().replace('total', ''))
+            if angka_sama.strip():
+                total_amount = int(angka_sama)
+                break
+            elif i + 1 < len(extracted_text):
+                angka_bawah = re.sub(r'[^\d]', '', extracted_text[i+1])
+                if angka_bawah.strip():
+                    total_amount = int(angka_bawah)
+                    break
+
+    return jsonify({
+        "merchant_name": merchant_name,
+        "tanggal": tanggal,
+        "total_amount": total_amount,
+        "payment_method": "cash",
+        "raw_text": extracted_text
+    })
+
+# 3. ENDPOINT 2: INSIGHT GENERATOR (RULE-BASED)
+def generate_insight(total, avg_pengeluaran):
+    """Fungsi logika Insight dari Tim AI"""
+    if total > avg_pengeluaran * 1.5:
+        return (
+            "Pengeluaran Anda lebih tinggi dari rata-rata. "
+            "Pertimbangkan untuk mengurangi pengeluaran non-prioritas."
+        )
+    elif total < avg_pengeluaran * 0.5:
+        return (
+            "Pengeluaran Anda lebih rendah dari biasanya. "
+            "Pertahankan pola pengelolaan keuangan yang baik."
+        )
+    else:
+        return (
+            "Pengeluaran Anda masih dalam rentang normal."
+        )
+
+@app.route('/api/insight', methods=['POST'])
+def get_insight():
+    data = request.json
+
+    if not data or 'total' not in data or 'avg_pengeluaran' not in data:
+        return jsonify({"error": "Format salah. Butuh 'total' dan 'avg_pengeluaran'"}), 400
 
     try:
-        if not model:
-            return jsonify({"error": "Model best.pt belum dipasang di server Python!"}), 500
-
-        results = model.predict(source=filepath, save=False)
+        total = float(data['total'])
+        avg_pengeluaran = float(data['avg_pengeluaran'])
         
-        img_cv = cv2.imread(filepath)
-        ocr_result = reader.readtext(img_cv)
-        detected_texts = [text[1] for text in ocr_result]
-
-        transaction_data = {
-            "merchant": "Toko Tidak Diketahui",
-            "total": 0,
-            "payment_method": "cash"
-        }
-
-        if len(detected_texts) > 0:
-            transaction_data["merchant"] = detected_texts[0].title()
-
-        for i, text in enumerate(detected_texts):
-            lower_text = text.lower()
-
-            if "debit" in lower_text or "card" in lower_text or "kartu" in lower_text:
-                transaction_data["payment_method"] = "debit-card"
-            elif "tunai" in lower_text or "cash" in lower_text:
-                transaction_data["payment_method"] = "cash"
-            elif "qris" in lower_text or "gopay" in lower_text or "pay" in lower_text:
-                transaction_data["payment_method"] = "e-wallet"
-
-            if any(keyword in lower_text for keyword in ["total", "toal", "toai", "jumlah", "jml"]):
-                if i + 1 < len(detected_texts):
-                    raw_total = detected_texts[i+1]
-                    clean_string = raw_total.replace("O", "0").replace("o", "0").replace("D", "0").replace("d", "0")
-                    only_numbers = ''.join(filter(str.isdigit, clean_string))
-                    
-                    if only_numbers:
-                        transaction_data["total"] = int(only_numbers)
+        # Eksekusi Fungsi Rule-Based
+        insight_message = generate_insight(total, avg_pengeluaran)
         
-        if os.path.exists(filepath):
-            os.remove(filepath)
-
         return jsonify({
-            "status": "success",
-            "data": transaction_data
-        }), 200
-
+            "success": True,
+            "insight_message": insight_message,
+            "data_analyzed": {
+                "total": total,
+                "avg_pengeluaran": avg_pengeluaran
+            }
+        })
     except Exception as e:
-        print("====== ERROR DETECTED ======")
-        traceback.print_exc()
-        print("============================")
-        
-        if 'filepath' in locals() and os.path.exists(filepath):
-            os.remove(filepath)
         return jsonify({"error": str(e)}), 500
 
+
+# JALANKAN SERVER PYTHON
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

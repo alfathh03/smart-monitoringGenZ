@@ -20,3 +20,21 @@ yarn-error.log*
 # File Sistem OS
 .DS_Store
 Thumbs.db
+
+# Dependencies
+node_modules/
+BE/node_modules/
+FE/node_modules/
+
+# Python Virtual Environment
+venv/
+BE/ai_service/venv/
+__pycache__/
+
+# Environment Variables
+.env
+FE/.env
+BE/.env
+
+# Editor
+.vscode/

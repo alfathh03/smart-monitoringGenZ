@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-// 1. Update tipe data kembalian agar bisa mengirim pesan sukses
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -35,13 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Modifikasi signUp dengan emailRedirectTo
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
-        // Arahkan kembali ke halaman auth setelah klik link di email
         emailRedirectTo: `${window.location.origin}/auth`,
       }
     });
@@ -55,12 +52,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  // 3. Modifikasi signIn untuk menangkap error belum verifikasi
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (error) {
-      // Tangkap error khusus dari Supabase jika user belum klik link di email
       if (error.message.includes("Email not confirmed")) {
         return { error: "Email belum diverifikasi. Silakan cek kotak masuk atau folder spam email Anda." };
       }
@@ -75,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Otomatis deteksi localhost atau domain saat produksi
         redirectTo: `${window.location.origin}/dashboard`, 
       },
     });

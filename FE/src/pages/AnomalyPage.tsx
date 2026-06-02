@@ -48,42 +48,49 @@ export default function AnomalyPage() {
     }
     
     setScanning(true);
-    setScanResult(null); // Tutup modal sebelumnya jika ada
+    setScanResult(null); 
 
     try {
-      // Mengirim variabel 'transactions' sebagai array mentah. 
       const res = await customBackendApi.anomalyDetect(transactions);
       const newAnomalies = res.data.anomalies;
 
       if (newAnomalies && newAnomalies.length > 0) {
         
-        // BATCH INSERT (Menyimpan semua anomali secara serentak/parallel)
-        const insertPromises = newAnomalies.map((anomaly: any) => {
-          const alertData = {
-            user_id: user.id,
-            transaction_id: anomaly.transaction_id,
-            alert_type: anomaly.alert_type,
-            severity: anomaly.severity,
-            z_score: Number(anomaly.z_score),
-            message: anomaly.message,
-            is_resolved: false
-          };
-          return anomalyAlertsApi.create(alertData);
+        const uniqueAnomalies = newAnomalies.filter((newAnomaly: any) => {
+          return !alerts.some((existingAlert) => existingAlert.transaction_id === newAnomaly.transaction_id);
         });
 
-        // Eksekusi semua proses simpan dalam 1 waktu
-        await Promise.all(insertPromises);
-        
-        fetchData(); // Refresh list di layar
-        
-        // POP-UP BAHAYA TAPI CANTIK
-        setScanResult({ 
-          type: 'warning', 
-          title: 'Waspada!', 
-          message: `AI mendeteksi ${newAnomalies.length} transaksi yang sangat tidak wajar! Cek daftarnya di bawah.`
-        });
+        if (uniqueAnomalies.length > 0) {
+          const insertPromises = uniqueAnomalies.map((anomaly: any) => {
+            const alertData = {
+              user_id: user.id,
+              transaction_id: anomaly.transaction_id,
+              alert_type: anomaly.alert_type,
+              severity: anomaly.severity,
+              z_score: Number(anomaly.z_score),
+              message: anomaly.message,
+              is_resolved: false
+            };
+            return anomalyAlertsApi.create(alertData);
+          });
+
+          await Promise.all(insertPromises);
+          fetchData(); 
+          
+          setScanResult({ 
+            type: 'warning', 
+            title: 'Waspada!', 
+            message: `AI mendeteksi ${uniqueAnomalies.length} transaksi aneh BARU! Cek daftarnya di bawah.`
+          });
+        } else {
+          setScanResult({ 
+            type: 'success', 
+            title: 'Sudah Terpantau!', 
+            message: 'Tidak ada anomali baru. Semua transaksi mencurigakan sudah tercatat di sistem.'
+          });
+        }
+
       } else {
-        // POP-UP AMAN TAPI CANTIK
         setScanResult({ 
           type: 'success', 
           title: 'Semua Aman!', 
@@ -92,7 +99,6 @@ export default function AnomalyPage() {
       }
     } catch (err: any) {
       console.error("Gagal menjalankan AI Scan:", err);
-      // POP-UP ERROR
       setScanResult({ 
         type: 'error', 
         title: 'Koneksi Gagal', 
@@ -106,12 +112,15 @@ export default function AnomalyPage() {
   const handleResolve = async (id: string) => { 
     try {
       setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, is_resolved: true } : a)); 
+      
+      // Simpan perubahan ke Supabase secara di balik layar
+      await anomalyAlertsApi.resolve(id);
     } catch (err) {
-      console.error("Gagal menutup alert");
+      console.error("Gagal menutup alert", err);
     }
   };
-
-  const filtered = alerts.filter((a) => filter === 'all' || a.severity === filter);
+  const filtered = alerts.filter((a) => !a.is_resolved && (filter === 'all' || a.severity === filter));
+  
   const unresolvedCount = alerts.filter((a) => !a.is_resolved).length;
   const highCount = alerts.filter((a) => a.severity === 'high' && !a.is_resolved).length;
 
@@ -183,12 +192,9 @@ export default function AnomalyPage() {
           ))}
         </div>
       )}
-
-      {/* ========================================= */}
-      {/* KODE POP-UP MODAL (MENGGANTIKAN ALERT)  */}
-      {/* ========================================= */}
+        //pop up
       {scanResult && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className={clsx("rounded-3xl p-6 max-w-sm w-full shadow-2xl transform transition-all border text-center", isLight ? "bg-white border-pink-100" : "bg-slate-900 border-slate-800")}>
             
             {/* Ikon Dinamis berdasarkan Tipe Alert */}
