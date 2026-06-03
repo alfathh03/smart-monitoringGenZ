@@ -108,9 +108,7 @@ export default function ScannerPage() {
         let BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         BASE_URL = BASE_URL.replace(/\/+$/, ''); 
         
-        const response = await axios.post(`${BASE_URL}/api/ocr-receipt`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        const response = await axios.post(`${BASE_URL}/api/ocr-receipt`, formData);
 
         const aiData = response.data;
 
