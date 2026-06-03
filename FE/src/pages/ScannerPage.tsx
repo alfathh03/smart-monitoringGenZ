@@ -17,7 +17,6 @@ interface ParsedReceipt {
   image_url?: string; 
 }
 
-// State baru untuk menampung BANYAK struk sekaligus
 interface ScannedItem {
   id: string;
   file: File;
@@ -36,10 +35,19 @@ export default function ScannerPage() {
   const [scannedItems, setScannedItems] = useState<ScannedItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [modalState, setModalState] = useState<{type: 'success' | 'warning' | 'error', title: string, message: string} | null>(null);
+  
+  // STATE BARU: Pendeteksi Perangkat (HP / Laptop)
+  const [isMobile, setIsMobile] = useState(false);
 
-  // 2 Ref berbeda untuk 2 jenis input
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+
+  // Fungsi Deteksi HP saat halaman pertama kali dibuka
+  useEffect(() => {
+    const userAgent = typeof window.navigator === "undefined" ? "" : navigator.userAgent;
+    const mobileCheck = Boolean(userAgent.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i));
+    setIsMobile(mobileCheck);
+  }, []);
 
   const fetchReceipts = useCallback(async () => {
     if (!user) return;
@@ -51,11 +59,9 @@ export default function ScannerPage() {
 
   useEffect(() => { fetchReceipts(); }, [fetchReceipts]);
 
-  // Fungsi Utama Pemroses Antrean File
   const handleFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
 
-    // 1. Masukkan semua file baru ke dalam antrean (State)
     const newItems: ScannedItem[] = Array.from(files).map((file) => ({
       id: Math.random().toString(36).substring(2, 9),
       file,
@@ -67,7 +73,6 @@ export default function ScannerPage() {
 
     setScannedItems((prev) => [...prev, ...newItems]);
 
-    // 2. Looping pengiriman ke Backend satu per satu (Biar Backend gak kaget)
     for (const item of newItems) {
       try {
         const formData = new FormData();
@@ -75,14 +80,12 @@ export default function ScannerPage() {
 
         const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         
-        // Memanggil custom backend API
         const response = await axios.post(`${BASE_URL}/api/ocr-receipt`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
 
         const aiData = response.data;
 
-        // Update state item ini menjadi 'success'
         setScannedItems((prev) => prev.map(p => p.id === item.id ? {
           ...p,
           status: 'success',
@@ -98,7 +101,6 @@ export default function ScannerPage() {
 
       } catch (error: any) {
         console.error("Gagal scan:", error);
-        // Update state item ini menjadi 'error'
         setScannedItems((prev) => prev.map(p => p.id === item.id ? {
           ...p,
           status: 'error',
@@ -108,7 +110,6 @@ export default function ScannerPage() {
     }
   };
 
-  // Fungsi Simpan Transaksi per-item
   const saveTransaction = async (item: ScannedItem) => {
     if (!item.parsed || !user) return;
     
@@ -133,7 +134,6 @@ export default function ScannerPage() {
         transaction_date: item.parsed.date     
       });
       
-      // Ubah status item menjadi tersimpan
       setScannedItems((prev) => prev.map(p => p.id === item.id ? { ...p, saved: true } : p));
       setModalState({ type: 'success', title: 'Berhasil!', message: `Pengeluaran di ${item.parsed?.merchant} sebesar Rp${item.parsed?.total.toLocaleString('id-ID')} telah dicatat.` });
       
@@ -152,14 +152,14 @@ export default function ScannerPage() {
     <div className="space-y-6 relative">
       <div>
         <h1 className={clsx("text-2xl font-bold transition-colors", isLight ? "text-slate-800" : "text-white")}>Smart Receipt Scanner</h1>
-        <p className={clsx("text-sm mt-1 transition-colors", isLight ? "text-slate-500" : "text-slate-400")}>Scan struk pakai kamera atau upload banyak sekaligus!</p>
+        <p className={clsx("text-sm mt-1 transition-colors", isLight ? "text-slate-500" : "text-slate-400")}>
+          {isMobile ? "Scan struk pakai kamera atau upload dari galeri!" : "Upload file struk belanja untuk dicatat otomatis!"}
+        </p>
       </div>
 
-      {/* INPUT TERSEMBUNYI */}
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const files = e.target.files; if(files) handleFiles(files); e.target.value = ''; }} />
       <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { const files = e.target.files; if(files) handleFiles(files); e.target.value = ''; }} />
 
-      {/* AREA UPLOAD DUAL BUTTON */}
       <div
         className={clsx(
           'border-2 border-dashed rounded-2xl p-6 text-center transition-all',
@@ -173,20 +173,28 @@ export default function ScannerPage() {
            <Upload className={clsx("w-10 h-10", activeStyle.text)} />
         </div>
         <p className={clsx("font-medium mb-4", isLight ? "text-slate-700" : "text-white")}>
-          Seret struk ke sini, atau pilih metode di bawah:
+          {isMobile ? "Pilih metode di bawah:" : "Seret struk ke sini, atau klik tombol di bawah:"}
         </p>
         
+        {/* LOGIKA TOMBOL DINAMIS BERDASARKAN PERANGKAT */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button onClick={() => cameraRef.current?.click()} className={clsx("flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105", activeStyle.solidBg, activeStyle.solidText)}>
-             <Camera className="w-5 h-5" /> Buka Kamera
-          </button>
+          
+          {/* Tombol Kamera HANYA muncul kalau di HP */}
+          {isMobile && (
+            <button onClick={() => cameraRef.current?.click()} className={clsx("flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105", activeStyle.solidBg, activeStyle.solidText)}>
+               <Camera className="w-5 h-5" /> Buka Kamera
+            </button>
+          )}
+
+          {/* Tombol Upload (Teksnya menyesuaikan) */}
           <button onClick={() => galleryRef.current?.click()} className={clsx("flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105 border-2", isLight ? "border-slate-200 text-slate-700 hover:bg-slate-50" : "border-slate-700 text-white hover:bg-slate-800")}>
-             <Images className="w-5 h-5" /> Upload Banyak Struk
+             <Images className="w-5 h-5" /> 
+             {isMobile ? "Upload dari Galeri" : "Upload File Struk"}
           </button>
+
         </div>
       </div>
 
-      {/* HASIL SCAN (LISTING) */}
       {scannedItems.length > 0 && (
         <div className="space-y-4 animate-in fade-in duration-300">
           <h3 className={clsx("font-bold text-lg border-b pb-2", isLight ? "text-slate-800 border-slate-200" : "text-white border-slate-700")}>
@@ -196,12 +204,10 @@ export default function ScannerPage() {
           {scannedItems.map((item) => (
             <div key={item.id} className={clsx("rounded-2xl border p-4 flex flex-col md:flex-row gap-4 relative overflow-hidden", isLight ? "bg-white border-pink-100 shadow-sm" : `${activeStyle.sidebarBg} border-white/5`)}>
               
-              {/* Tombol Hapus */}
               <button onClick={() => removeItem(item.id)} className="absolute top-3 right-3 p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
 
-              {/* Preview Gambar */}
               <div className="w-full md:w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden bg-black/5 flex items-center justify-center relative">
                 <img src={item.preview} alt="Struk" className="w-full h-full object-cover opacity-90" />
                 {item.status === 'loading' && (
@@ -212,7 +218,6 @@ export default function ScannerPage() {
                 )}
               </div>
 
-              {/* Data Hasil AI */}
               <div className="flex-1 flex flex-col justify-center">
                 {item.status === 'loading' ? (
                    <div className="animate-pulse space-y-3 w-full">
@@ -250,7 +255,6 @@ export default function ScannerPage() {
         </div>
       )}
 
-      {/* POP-UP MODAL TETAP SAMA */}
       {modalState && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className={clsx("rounded-3xl p-6 max-w-sm w-full shadow-2xl transform transition-all border text-center", isLight ? "bg-white border-pink-100" : "bg-slate-900 border-slate-800")}>
