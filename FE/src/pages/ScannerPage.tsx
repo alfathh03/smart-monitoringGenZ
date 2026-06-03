@@ -36,13 +36,11 @@ export default function ScannerPage() {
   const [dragActive, setDragActive] = useState(false);
   const [modalState, setModalState] = useState<{type: 'success' | 'warning' | 'error', title: string, message: string} | null>(null);
   
-  // STATE BARU: Pendeteksi Perangkat (HP / Laptop)
   const [isMobile, setIsMobile] = useState(false);
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
-  // Fungsi Deteksi HP saat halaman pertama kali dibuka
   useEffect(() => {
     const userAgent = typeof window.navigator === "undefined" ? "" : navigator.userAgent;
     const mobileCheck = Boolean(userAgent.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i));
@@ -78,7 +76,8 @@ export default function ScannerPage() {
         const formData = new FormData();
         formData.append('receiptImage', item.file); 
 
-        const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        let BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        BASE_URL = BASE_URL.replace(/\/+$/, ''); 
         
         const response = await axios.post(`${BASE_URL}/api/ocr-receipt`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
@@ -176,17 +175,14 @@ export default function ScannerPage() {
           {isMobile ? "Pilih metode di bawah:" : "Seret struk ke sini, atau klik tombol di bawah:"}
         </p>
         
-        {/* LOGIKA TOMBOL DINAMIS BERDASARKAN PERANGKAT */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           
-          {/* Tombol Kamera HANYA muncul kalau di HP */}
           {isMobile && (
             <button onClick={() => cameraRef.current?.click()} className={clsx("flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105", activeStyle.solidBg, activeStyle.solidText)}>
                <Camera className="w-5 h-5" /> Buka Kamera
             </button>
           )}
 
-          {/* Tombol Upload (Teksnya menyesuaikan) */}
           <button onClick={() => galleryRef.current?.click()} className={clsx("flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105 border-2", isLight ? "border-slate-200 text-slate-700 hover:bg-slate-50" : "border-slate-700 text-white hover:bg-slate-800")}>
              <Images className="w-5 h-5" /> 
              {isMobile ? "Upload dari Galeri" : "Upload File Struk"}
