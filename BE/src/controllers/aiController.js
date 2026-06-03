@@ -25,7 +25,14 @@ const detectAnomaly = async (req, res) => {
     }
 
     const expenses = transactions.filter(t => (t.type || 'expense') === 'expense');
-    const amounts = expenses.map(t => Number(t.amount) || 0);
+    
+    const amounts = expenses.map(t => {
+      let val = t.amount;
+      if (typeof val === 'string') {
+        val = val.replace(/[^0-9.-]+/g, ""); 
+      }
+      return Number(val) || 0;
+    });
     
     if (amounts.length === 0) {
       return res.status(200).json({ success: true, anomalies: [], model: "Z-Score" });
@@ -36,15 +43,16 @@ const detectAnomaly = async (req, res) => {
     const stdDev = Math.sqrt(variance) || 1; 
 
     const anomalies = [];
-    expenses.forEach(tx => {
-      const zScore = Math.abs((tx.amount - mean) / stdDev);
+    expenses.forEach((tx, index) => {
+      const cleanAmount = amounts[index];
+      const zScore = Math.abs((cleanAmount - mean) / stdDev);
       if (zScore > 2) {
         anomalies.push({
           transaction_id: tx.id,
           z_score: parseFloat(zScore.toFixed(2)), 
           severity: zScore > 3 ? 'high' : 'medium',
           alert_type: 'unusual_spending',
-          message: `Terdeteksi pengeluaran mencurigakan sebesar Rp${Number(tx.amount).toLocaleString('id-ID')}`
+          message: `Terdeteksi pengeluaran mencurigakan sebesar Rp${cleanAmount.toLocaleString('id-ID')}`
         });
       }
     });
@@ -113,7 +121,11 @@ const calculateStandardDeviation = (data, mean) => {
 
 const checkAnomaly = async (req, res) => {
     try {
-        const { current_transaction_amount, user_id } = req.body;
+        let { current_transaction_amount, user_id } = req.body;
+
+        if (typeof current_transaction_amount === 'string') {
+            current_transaction_amount = parseFloat(current_transaction_amount.replace(/[^0-9.-]+/g, ""));
+        }
 
         const historyTransactions = [50000, 45000, 55000, 60000, 48000]; 
 
