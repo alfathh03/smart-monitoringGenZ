@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 
-// 1. TAMBAHKAN MULTER
+// multer
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); 
+const upload = multer({ dest: '/tmp/' }); 
 
 // Import Controller
 const aiController = require('../controllers/aiController');
@@ -23,9 +23,7 @@ router.post('/transactions', validateTransaction, transactionController.addTrans
 
 // --- ROUTE AI & OCR ---
 router.post('/anomaly-detect', aiController.detectAnomaly);
-
 router.post('/ocr-receipt', upload.single('receiptImage'), aiController.processOCR);
-
 router.post('/generate-insight', aiController.getFinancialInsight);
 
 module.exports = router;
