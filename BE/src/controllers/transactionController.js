@@ -42,14 +42,19 @@ const addTransaction = async (req, res) => {
     try {
         const userId = req.user ? req.user.id : 'd7628eef-242e-4142-80d4-cb8fadba041b';
         
-        const { type, amount, category, description, source, date, is_ocr, image_url } = req.body;
+        let { type, amount, category, description, source, date, is_ocr, image_url } = req.body;
+
+        let cleanAmount = amount;
+        if (typeof amount === 'string') {
+            cleanAmount = parseInt(amount.replace(/[^0-9]/g, ''), 10);
+        }
 
         const { data: transaction, error: txError } = await supabase
             .from('transactions')
             .insert([{ 
                 user_id: userId, 
                 type: type,             
-                amount: amount, 
+                amount: cleanAmount, 
                 category: category,          
                 description: description,     
                 source: source,         

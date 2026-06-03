@@ -3,6 +3,7 @@ import { Target, Wallet, Scan, TrendingUp, CheckCircle2, Gift, Loader2 } from 'l
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
 import { transactionsApi, receiptsApi, insightsApi, profilesApi } from '../lib/api';
+import { supabase } from '../lib/supabase'; 
 import { isToday, format } from 'date-fns';
 import clsx from 'clsx';
 
@@ -20,19 +21,28 @@ export default function DailyQuestsMenu() {
     checkInsight: 0
   });
 
-  // SISTEM LAZY RESET: Menggunakan kunci tanggal hari ini
   const todayKey = format(new Date(), 'yyyy-MM-dd');
   const [claimedQuests, setClaimedQuests] = useState<number[]>([]);
 
-  const loadClaimedStatus = useCallback(() => {
+  // 🔥 PERBAIKAN: Ambil data Misi dari Supabase (Bukan LocalStorage)
+  const loadClaimedStatus = useCallback(async () => {
     if (!user) return;
-    // Cek apakah hari ini user sudah klaim misi tertentu
-    const saved = localStorage.getItem(`quests_${user.id}_${todayKey}`);
-    if (saved) {
-      setClaimedQuests(JSON.parse(saved));
-    } else {
-      // Jika ganti hari (tanggal beda), localStorage tidak ketemu, RESET otomatis jadi kosong!
-      setClaimedQuests([]);
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('last_claim_date, claimed_quests')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (profile?.last_claim_date === todayKey) {
+        setClaimedQuests(profile.claimed_quests || []);
+      } else {
+        setClaimedQuests([]); 
+      }
+    } catch (err) {
+      console.error("Gagal load status misi dari DB:", err);
     }
   }, [user, todayKey]);
 
@@ -54,7 +64,6 @@ export default function DailyQuestsMenu() {
         scanReceipt: todayReceipts.length > 0 ? 1 : 0, 
         checkInsight: todayInsights.length > 0 ? 1 : 0
       });
-
     } catch (err) {
       console.error("Gagal memuat progress misi:", err);
     }
@@ -82,24 +91,26 @@ export default function DailyQuestsMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // FUNGSI KLAIM POIN
   const handleClaim = async (questId: number, reward: number) => {
     if (!user) return;
     setClaiming(questId);
     try {
-      // 1. Cek poin user sekarang
       const profile = await profilesApi.get(user.id);
       const currentPoints = profile?.points || 0;
 
-      // 2. Tambahkan poin reward ke database Supabase
+      // 1. Tambah Poin
       await profilesApi.updatePoints(user.id, currentPoints + reward);
 
-      // 3. Kunci status misi ini agar tidak bisa diklaim 2x hari ini
       const newClaimed = [...claimedQuests, questId];
-      setClaimedQuests(newClaimed);
-      localStorage.setItem(`quests_${user.id}_${todayKey}`, JSON.stringify(newClaimed));
+      await supabase
+        .from('profiles')
+        .update({ 
+            last_claim_date: todayKey,
+            claimed_quests: newClaimed
+        })
+        .eq('id', user.id);
 
-      // 4. (Opsional) Refresh halaman agar GamificationPage langsung update angkanya
+      setClaimedQuests(newClaimed);
       window.dispatchEvent(new Event('pointsUpdated'));
     } catch (error) {
       console.error("Gagal klaim poin:", error);
@@ -114,7 +125,6 @@ export default function DailyQuestsMenu() {
     { id: 3, title: 'Cek Insight Keuangan', reward: 5, current: questProgress.checkInsight, target: 1, icon: <TrendingUp className="w-4 h-4" /> },
   ];
 
-  // Hitung berapa misi yang belum diklaim tapi sudah memenuhi syarat
   const activeQuests = DAILY_QUESTS.filter(q => q.current >= q.target && !claimedQuests.includes(q.id)).length;
 
   return (
