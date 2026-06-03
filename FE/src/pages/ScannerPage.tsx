@@ -7,6 +7,8 @@ import { Upload, CheckCircle, AlertCircle, Sparkles, Loader2, Camera, Images, Tr
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import axios from 'axios'; 
+// INI IMPORT YANG PENTING BUAT MUTER GAMBAR:
+import imageCompression from 'browser-image-compression'; 
 
 interface ParsedReceipt { 
   merchant: string; 
@@ -60,18 +62,45 @@ export default function ScannerPage() {
   const handleFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
 
-    const newItems: ScannedItem[] = Array.from(files).map((file) => ({
-      id: Math.random().toString(36).substring(2, 9),
-      file,
-      preview: URL.createObjectURL(file),
-      status: 'loading',
-      parsed: null,
-      saved: false
-    }));
+    // 1. PROSES GAMBAR DULU (Auto-Rotate & Kompresi)
+    const processedItems: ScannedItem[] = [];
+    
+    for (const file of Array.from(files)) {
+      try {
+       const options: any = {
+          maxSizeMB: 1.5, 
+          maxWidthOrHeight: 1920,
+          useWebWorker: true,
+          exifOrientation: true 
+        };
+        
+        const compressedFile = await imageCompression(file, options);
+        
+        processedItems.push({
+          id: Math.random().toString(36).substring(2, 9),
+          file: compressedFile, 
+          preview: URL.createObjectURL(compressedFile), 
+          status: 'loading',
+          parsed: null,
+          saved: false
+        });
+      } catch (error) {
+        // Fallback kalau kompresi gagal
+        processedItems.push({
+          id: Math.random().toString(36).substring(2, 9),
+          file: file,
+          preview: URL.createObjectURL(file),
+          status: 'loading',
+          parsed: null,
+          saved: false
+        });
+      }
+    }
 
-    setScannedItems((prev) => [...prev, ...newItems]);
+    setScannedItems((prev) => [...prev, ...processedItems]);
 
-    for (const item of newItems) {
+    // 2. KIRIM KE AI BACKEND
+    for (const item of processedItems) {
       try {
         const formData = new FormData();
         formData.append('receiptImage', item.file); 
@@ -205,7 +234,8 @@ export default function ScannerPage() {
               </button>
 
               <div className="w-full md:w-40 h-40 flex-shrink-0 rounded-xl overflow-hidden bg-black/5 flex items-center justify-center relative">
-                <img src={item.preview} alt="Struk" className="w-full h-full object-cover opacity-90" />
+                {}
+                <img src={item.preview} alt="Struk" className="w-full h-full object-contain bg-slate-100 dark:bg-slate-800" />
                 {item.status === 'loading' && (
                   <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center flex-col">
                     <Loader2 className={clsx("w-8 h-8 animate-spin mb-2", activeStyle.text)} />

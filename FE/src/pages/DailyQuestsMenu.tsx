@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Target, Wallet, Scan, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Target, Wallet, Scan, TrendingUp, CheckCircle2, Gift, Loader2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
-import { transactionsApi, receiptsApi, insightsApi } from '../lib/api';
-import { isToday } from 'date-fns';
+import { transactionsApi, receiptsApi, insightsApi, profilesApi } from '../lib/api';
+import { isToday, format } from 'date-fns';
 import clsx from 'clsx';
 
 export default function DailyQuestsMenu() {
@@ -12,11 +12,29 @@ export default function DailyQuestsMenu() {
   
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [claiming, setClaiming] = useState<number | null>(null);
+
   const [questProgress, setQuestProgress] = useState({
     manualTx: 0,
     scanReceipt: 0,
     checkInsight: 0
   });
+
+  // SISTEM LAZY RESET: Menggunakan kunci tanggal hari ini
+  const todayKey = format(new Date(), 'yyyy-MM-dd');
+  const [claimedQuests, setClaimedQuests] = useState<number[]>([]);
+
+  const loadClaimedStatus = useCallback(() => {
+    if (!user) return;
+    // Cek apakah hari ini user sudah klaim misi tertentu
+    const saved = localStorage.getItem(`quests_${user.id}_${todayKey}`);
+    if (saved) {
+      setClaimedQuests(JSON.parse(saved));
+    } else {
+      // Jika ganti hari (tanggal beda), localStorage tidak ketemu, RESET otomatis jadi kosong!
+      setClaimedQuests([]);
+    }
+  }, [user, todayKey]);
 
   const checkMissions = useCallback(async () => {
     if (!user) return;
@@ -31,7 +49,6 @@ export default function DailyQuestsMenu() {
       const todayReceipts = (receiptRes.data || []).filter((r: any) => isToday(new Date(r.created_at)));
       const todayInsights = (insightRes.data || []).filter((i: any) => isToday(new Date(i.created_at)));
 
-      // Update skor misinya
       setQuestProgress({
         manualTx: todayTx.length > 0 ? 1 : 0,
         scanReceipt: todayReceipts.length > 0 ? 1 : 0, 
@@ -43,16 +60,17 @@ export default function DailyQuestsMenu() {
     }
   }, [user]);
 
-
   useEffect(() => {
     if (isOpen) {
       checkMissions();
+      loadClaimedStatus();
     }
-  }, [isOpen, checkMissions]);
+  }, [isOpen, checkMissions, loadClaimedStatus]);
 
   useEffect(() => {
     checkMissions();
-  }, [checkMissions]);
+    loadClaimedStatus();
+  }, [checkMissions, loadClaimedStatus]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -64,17 +82,43 @@ export default function DailyQuestsMenu() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // FUNGSI KLAIM POIN
+  const handleClaim = async (questId: number, reward: number) => {
+    if (!user) return;
+    setClaiming(questId);
+    try {
+      // 1. Cek poin user sekarang
+      const profile = await profilesApi.get(user.id);
+      const currentPoints = profile?.points || 0;
+
+      // 2. Tambahkan poin reward ke database Supabase
+      await profilesApi.updatePoints(user.id, currentPoints + reward);
+
+      // 3. Kunci status misi ini agar tidak bisa diklaim 2x hari ini
+      const newClaimed = [...claimedQuests, questId];
+      setClaimedQuests(newClaimed);
+      localStorage.setItem(`quests_${user.id}_${todayKey}`, JSON.stringify(newClaimed));
+
+      // 4. (Opsional) Refresh halaman agar GamificationPage langsung update angkanya
+      window.dispatchEvent(new Event('pointsUpdated'));
+    } catch (error) {
+      console.error("Gagal klaim poin:", error);
+    } finally {
+      setClaiming(null);
+    }
+  };
+
   const DAILY_QUESTS = [
     { id: 1, title: 'Catat Pengeluaran Manual', reward: 10, current: questProgress.manualTx, target: 1, icon: <Wallet className="w-4 h-4" /> },
     { id: 2, title: 'Scan Struk Pertama', reward: 25, current: questProgress.scanReceipt, target: 1, icon: <Scan className="w-4 h-4" /> },
     { id: 3, title: 'Cek Insight Keuangan', reward: 5, current: questProgress.checkInsight, target: 1, icon: <TrendingUp className="w-4 h-4" /> },
   ];
 
-  const activeQuests = DAILY_QUESTS.filter(q => q.current < q.target).length;
+  // Hitung berapa misi yang belum diklaim tapi sudah memenuhi syarat
+  const activeQuests = DAILY_QUESTS.filter(q => q.current >= q.target && !claimedQuests.includes(q.id)).length;
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* Tombol Pemicu di Top Bar */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={clsx(
@@ -85,14 +129,12 @@ export default function DailyQuestsMenu() {
       >
         <div className="relative">
           <Target className="w-5 h-5" />
-          {/* Titik merah notifikasi */}
           {activeQuests > 0 && (
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border-2 border-white dark:border-slate-900" />
           )}
         </div>
       </button>
 
-      {/* Kotak Dropdown Misi */}
       {isOpen && (
         <div className={clsx(
           "absolute right-0 mt-3 w-80 rounded-2xl shadow-2xl border z-50 animate-in fade-in slide-in-from-top-2 duration-200",
@@ -107,29 +149,44 @@ export default function DailyQuestsMenu() {
             </span>
           </div>
           
-          <div className="p-2 space-y-1 max-h-[300px] overflow-y-auto">
+          <div className="p-2 space-y-1 max-h-[350px] overflow-y-auto">
             {DAILY_QUESTS.map((quest) => {
               const isCompleted = quest.current >= quest.target;
+              const isClaimed = claimedQuests.includes(quest.id);
+
               return (
                 <div key={quest.id} className={clsx(
                   "flex items-center gap-3 p-3 rounded-xl transition-all", 
                   isLight ? "hover:bg-slate-50" : "hover:bg-slate-800/50",
-                  isCompleted && "opacity-60" // Meredup kalau sudah selesai
+                  isClaimed && "opacity-50" 
                 )}>
                   <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0", isCompleted ? "bg-emerald-500/20 text-emerald-500" : "bg-indigo-500/20 text-indigo-500")}>
-                    {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : quest.icon}
+                    {isClaimed ? <CheckCircle2 className="w-4 h-4" /> : quest.icon}
                   </div>
+                  
                   <div className="flex-1 min-w-0">
                     <p className={clsx("text-sm font-medium truncate", isLight ? "text-slate-800" : "text-white")}>{quest.title}</p>
                     <div className="w-full h-1.5 rounded-full mt-1.5 overflow-hidden bg-slate-200 dark:bg-slate-700">
                       <div className="bg-indigo-500 h-full rounded-full transition-all duration-1000" style={{ width: `${(quest.current / quest.target) * 100}%` }} />
                     </div>
                   </div>
+
                   <div className="text-right flex-shrink-0">
-                    {/* Teks berubah jadi hijau kalau kelar */}
-                    <span className={clsx("text-xs font-bold", isCompleted ? "text-emerald-500" : "text-indigo-500")}>
-                      {isCompleted ? 'Selesai!' : `+${quest.reward} Pts`}
-                    </span>
+                    {isClaimed ? (
+                      <span className="text-xs font-bold text-emerald-500 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Diklaim
+                      </span>
+                    ) : isCompleted ? (
+                      <button 
+                        onClick={() => handleClaim(quest.id, quest.reward)}
+                        disabled={claiming === quest.id}
+                        className={clsx("text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-transform active:scale-95", activeStyle.solidBg, activeStyle.solidText)}
+                      >
+                        {claiming === quest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Gift className="w-3 h-3" /> Klaim</>}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-bold text-indigo-500">+{quest.reward} Pts</span>
+                    )}
                   </div>
                 </div>
               );
