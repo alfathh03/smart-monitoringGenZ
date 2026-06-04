@@ -110,7 +110,7 @@ const getFinancialInsight = async (req, res) => {
     const prompt = `Kamu adalah asisten keuangan cerdas, asik, dan gaul untuk anak Gen Z di aplikasi Smart Budget.\nBulan ini, pengguna telah menghabiskan total pengeluaran sebesar Rp${total} dengan rata-rata Rp${avg_pengeluaran} per transaksi.\nBerikan 1 paragraf pendek (maksimal 3 kalimat) berisi insight dan saran keuangan berdasarkan angka tersebut. Gunakan bahasa gaul yang santai (seperti pakai kata lu/gue), memotivasi, dan WAJIB HINDARI penggunaan pemformatan markdown (jangan pakai tanda bintang atau cetak tebal).`;
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }]
       },
