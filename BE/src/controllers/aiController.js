@@ -1,6 +1,7 @@
 require('dotenv').config();
 global.WebSocket = require('ws');
 
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');

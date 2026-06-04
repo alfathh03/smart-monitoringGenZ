@@ -17,7 +17,7 @@ router.get('/status', (req, res) => {
   res.json({ message: "API Backend ready" });
 });
 
-// --- ROUTE TRANSAKSI (Redis & RabbitMQ Terintegrasi di Controller) ---
+// --- ROUTE TRANSAKSI (Redi  s & RabbitMQ Terintegrasi di Controller) ---
 router.get('/transactions', transactionController.getTransactions);
 router.post('/transactions', validateTransaction, transactionController.addTransaction);
 
