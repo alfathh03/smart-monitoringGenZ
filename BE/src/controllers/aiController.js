@@ -101,7 +101,6 @@ const getFinancialInsight = async (req, res) => {
   try {
     const { total, avg_pengeluaran } = req.body;
     
-    // Log pelacak data dari Frontend
     console.log("Menerima data dari FE - Total:", total, "Avg:", avg_pengeluaran);
 
     if (!process.env.GEMINI_API_KEY) {
@@ -110,7 +109,7 @@ const getFinancialInsight = async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `Kamu adalah asisten keuangan cerdas, asik, dan gaul untuk anak Gen Z di aplikasi Smart Budget.
     Bulan ini, pengguna telah menghabiskan total pengeluaran sebesar Rp${total} dengan rata-rata Rp${avg_pengeluaran} per transaksi.
@@ -122,7 +121,7 @@ const getFinancialInsight = async (req, res) => {
     res.status(200).json({ success: true, insight: insightMessage });
 
   } catch (error) {
-    console.error("🚨 GEMINI API ERROR:", error.message || error);
+    console.error("GEMINI API ERROR:", error.message || error);
     res.status(500).json({ 
         success: false, 
         message: "Gagal memproses insight dengan AI", 
