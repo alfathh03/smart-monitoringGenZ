@@ -109,7 +109,7 @@ const getFinancialInsight = async (req, res) => {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
     const prompt = `Kamu adalah asisten keuangan cerdas, asik, dan gaul untuk anak Gen Z di aplikasi Smart Budget.
     Bulan ini, pengguna telah menghabiskan total pengeluaran sebesar Rp${total} dengan rata-rata Rp${avg_pengeluaran} per transaksi.
