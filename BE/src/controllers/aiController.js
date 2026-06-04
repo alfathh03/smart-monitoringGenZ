@@ -1,7 +1,6 @@
 require('dotenv').config();
 global.WebSocket = require('ws');
 
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
@@ -108,24 +107,30 @@ const getFinancialInsight = async (req, res) => {
       return res.status(500).json({ success: false, message: "Kunci Gemini belum dipasang di backend!" });
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const prompt = `Kamu adalah asisten keuangan cerdas, asik, dan gaul untuk anak Gen Z di aplikasi Smart Budget.\nBulan ini, pengguna telah menghabiskan total pengeluaran sebesar Rp${total} dengan rata-rata Rp${avg_pengeluaran} per transaksi.\nBerikan 1 paragraf pendek (maksimal 3 kalimat) berisi insight dan saran keuangan berdasarkan angka tersebut. Gunakan bahasa gaul yang santai (seperti pakai kata lu/gue), memotivasi, dan WAJIB HINDARI penggunaan pemformatan markdown (jangan pakai tanda bintang atau cetak tebal).`;
 
-    const prompt = `Kamu adalah asisten keuangan cerdas, asik, dan gaul untuk anak Gen Z di aplikasi Smart Budget.
-    Bulan ini, pengguna telah menghabiskan total pengeluaran sebesar Rp${total} dengan rata-rata Rp${avg_pengeluaran} per transaksi.
-    Berikan 1 paragraf pendek (maksimal 3 kalimat) berisi insight dan saran keuangan berdasarkan angka tersebut. Gunakan bahasa gaul yang santai (seperti pakai kata lu/gue), memotivasi, dan WAJIB HINDARI penggunaan pemformatan markdown (jangan pakai tanda bintang atau cetak tebal).`;
+    const response = await axios.post(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        contents: [{ parts: [{ text: prompt }] }]
+      },
+      { 
+        headers: { 'Content-Type': 'application/json' } 
+      }
+    );
 
-    const result = await model.generateContent(prompt);
-    const insightMessage = result.response.text();
+    const insightMessage = response.data.candidates[0].content.parts[0].text;
     
     res.status(200).json({ success: true, insight: insightMessage });
 
   } catch (error) {
-    console.error("GEMINI API ERROR:", error.message || error);
+    const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
+    console.error("GEMINI DIRECT API ERROR:", errorMsg);
+    
     res.status(500).json({ 
         success: false, 
         message: "Gagal memproses insight dengan AI", 
-        error_detail: error.message 
+        error_detail: errorMsg 
     });
   }
 };
