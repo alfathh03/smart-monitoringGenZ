@@ -101,7 +101,11 @@ const getFinancialInsight = async (req, res) => {
   try {
     const { total, avg_pengeluaran } = req.body;
     
+    // Log pelacak data dari Frontend
+    console.log("Menerima data dari FE - Total:", total, "Avg:", avg_pengeluaran);
+
     if (!process.env.GEMINI_API_KEY) {
+      console.error("KUNCI GEMINI KOSONG DI SERVER!");
       return res.status(500).json({ success: false, message: "Kunci Gemini belum dipasang di backend!" });
     }
 
@@ -118,7 +122,12 @@ const getFinancialInsight = async (req, res) => {
     res.status(200).json({ success: true, insight: insightMessage });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: "Gagal memproses insight dengan AI" });
+    console.error("🚨 GEMINI API ERROR:", error.message || error);
+    res.status(500).json({ 
+        success: false, 
+        message: "Gagal memproses insight dengan AI", 
+        error_detail: error.message 
+    });
   }
 };
 
