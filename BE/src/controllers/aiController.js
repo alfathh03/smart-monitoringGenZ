@@ -100,11 +100,25 @@ const processOCR = async (req, res) => {
 const getFinancialInsight = async (req, res) => {
   try {
     const { total, avg_pengeluaran } = req.body;
-    const pythonResponse = await axios.post(`${AI_SERVICE_URL}/api/insight`, { total, avg_pengeluaran });
     
-    res.status(200).json({ success: true, insight: pythonResponse.data.insight_message });
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ success: false, message: "Kunci Gemini belum dipasang di backend!" });
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `Kamu adalah asisten keuangan cerdas, asik, dan gaul untuk anak Gen Z di aplikasi Smart Budget.
+    Bulan ini, pengguna telah menghabiskan total pengeluaran sebesar Rp${total} dengan rata-rata Rp${avg_pengeluaran} per transaksi.
+    Berikan 1 paragraf pendek (maksimal 3 kalimat) berisi insight dan saran keuangan berdasarkan angka tersebut. Gunakan bahasa gaul yang santai (seperti pakai kata lu/gue), memotivasi, dan WAJIB HINDARI penggunaan pemformatan markdown (jangan pakai tanda bintang atau cetak tebal).`;
+
+    const result = await model.generateContent(prompt);
+    const insightMessage = result.response.text();
+    
+    res.status(200).json({ success: true, insight: insightMessage });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: "Gagal ambil insight" });
+    res.status(500).json({ success: false, message: "Gagal memproses insight dengan AI" });
   }
 };
 
