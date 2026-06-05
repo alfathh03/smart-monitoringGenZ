@@ -29,6 +29,9 @@ This project adopts a Monorepo Microservices-inspired architecture to ensure sca
 * Redis & RabbitMQ running locally
 * Supabase Account
 
+link model AI: https://drive.google.com/file/d/1q9jWk_6WnWEX73nuBYiuQg_w5Rk8r1N1/view?usp=sharing
+
+
 ### 1. Clone the Repository
 ```bash
 git clone (https://github.com/Dicki-ibnu/smart-monitoringGenZ)
