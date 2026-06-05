@@ -5,7 +5,6 @@ const calculateMean = (data) => {
     return sum / data.length;
 };
 
-// Fungsi pembantu untuk menghitung Standar Deviasi
 const calculateStandardDeviation = (data, mean) => {
     if (data.length === 0) return 0;
     const variance = data.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / data.length;

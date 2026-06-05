@@ -24,7 +24,7 @@ const getLeaderboard = async (req, res) => {
             .from('profiles')
             .select('id, full_name, points')
             .order('points', { ascending: false })
-            .limit(5); // Nampilin Top 5
+            .limit(5); 
 
         if (error) throw error;
         return res.status(200).json({ data });
@@ -39,7 +39,6 @@ const unlockTheme = async (req, res) => {
         const { id } = req.params;
         const { theme_id, remaining_points, unlocked_themes } = req.body;
 
-        // Tambahkan tema baru ke daftar yang sudah terbuka
         const newUnlockedThemes = [...new Set([...unlocked_themes, theme_id])];
 
         const { data, error } = await supabase

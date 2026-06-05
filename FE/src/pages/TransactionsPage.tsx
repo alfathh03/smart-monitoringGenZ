@@ -3,17 +3,16 @@ import { useAuth } from '../hooks/useAuth';
 import { transactionsApi, profilesApi } from '../lib/api';
 import { useTheme } from '../context/ThemeContext'; 
 import type { Transaction, TransactionSource, TransactionType } from '../types';
-import { Plus, Search, Trash2, CreditCard as Edit3, X, Check, ArrowUpRight, ArrowDownRight, CreditCard, Smartphone, Banknote, ChevronDown, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 
-const SOURCES: { value: TransactionSource; label: string; icon: React.ReactNode }[] = [
-  { value: 'e-wallet', label: 'E-Wallet', icon: <Smartphone className="w-4 h-4" /> },
-  { value: 'mobile-banking', label: 'Mobile Banking', icon: <CreditCard className="w-4 h-4" /> },
-  { value: 'cash', label: 'Cash', icon: <Banknote className="w-4 h-4" /> },
-  { value: 'debit-card', label: 'Debit Card', icon: <CreditCard className="w-4 h-4" /> },
-  { value: 'credit-card', label: 'Credit Card', icon: <CreditCard className="w-4 h-4" /> },
-  { value: 'transfer', label: 'Transfer', icon: <ArrowUpRight className="w-4 h-4" /> },
+const SOURCES: { value: TransactionSource; label: string }[] = [
+  { value: 'e-wallet', label: 'E-Wallet' },
+  { value: 'mobile-banking', label: 'Mobile Banking' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'debit-card', label: 'Debit Card' },
+  { value: 'credit-card', label: 'Credit Card' },
+  { value: 'transfer', label: 'Transfer' },
 ];
 
 const AUTO_CATEGORIES: Record<string, string[]> = {
@@ -53,8 +52,6 @@ export default function TransactionsPage() {
   const [filterSource, setFilterSource] = useState<'all' | TransactionSource>('all');
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
-  // STATE BARU: Pop-Up Modal
   const [modalState, setModalState] = useState<{type: 'success' | 'warning' | 'error', title: string, message: string} | null>(null);
 
   const fetchTransactions = useCallback(async () => {
@@ -110,21 +107,20 @@ export default function TransactionsPage() {
         </div>
         <button
           onClick={() => { setShowForm(true); setEditingId(null); }}
-          className={clsx("flex items-center gap-2 px-4 py-2.5 font-semibold rounded-xl hover:opacity-90 transition-all text-sm", activeStyle.solidBg, activeStyle.solidText, activeStyle.glow)}
+          className={clsx("px-4 py-2.5 font-semibold rounded-xl hover:opacity-90 transition-all text-sm", activeStyle.solidBg, activeStyle.solidText, activeStyle.glow)}
         >
-          <Plus className="w-4 h-4" /> Add Transaction
+          Add Transaction
         </button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search transactions..."
-            className={clsx("w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-colors", isLight ? "bg-white border-pink-100 text-slate-800 placeholder-slate-400" : `${activeStyle.sidebarBg} border-white/10 text-white placeholder-slate-500`)}
+            className={clsx("w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-colors", isLight ? "bg-white border-pink-100 text-slate-800 placeholder-slate-400" : `${activeStyle.sidebarBg} border-white/10 text-white placeholder-slate-500`)}
           />
         </div>
       </div>
@@ -144,22 +140,35 @@ export default function TransactionsPage() {
       )}
 
       <div className={clsx("rounded-2xl border overflow-hidden transition-all", isLight ? "bg-white border-pink-100 shadow-sm" : `${activeStyle.sidebarBg} border-white/5`)}>
-        <div className="block sm:hidden divide-y divide-slate-800/50">
+        
+        <div className="block sm:hidden divide-y divide-slate-800/20">
           {filtered.map((tx) => (
             <div key={tx.id} className={clsx("p-4 transition-colors", isLight ? "hover:bg-pink-50" : "hover:bg-slate-800/30")}>
-              <div className="flex items-center gap-3 mb-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${(tx.type || 'expense') === 'expense' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                  {(tx.type || 'expense') === 'expense' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-xs font-bold ${(tx.type || 'expense') === 'expense' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                  {(tx.type || 'expense') === 'expense' ? 'OUT' : 'IN'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={clsx("text-sm truncate font-medium", isLight ? "text-slate-800" : "text-white")}>{tx.description || 'Untitled'}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className={clsx("text-xs capitalize", isLight ? "text-slate-500" : "text-slate-400")}>{(tx.source || 'e-wallet').replace('-', ' ')}</span>
-                  </div>
+                  <p className={clsx("text-base truncate font-semibold", isLight ? "text-slate-800" : "text-white")}>{tx.description || 'Untitled'}</p>
+                  <p className={clsx("text-xs capitalize mt-0.5", isLight ? "text-slate-500" : "text-slate-400")}>{(tx.source || 'e-wallet').replace('-', ' ')} • {tx.category || 'Uncategorized'}</p>
                 </div>
-                <span className={`text-sm font-semibold ${(tx.type || 'expense') === 'expense' ? 'text-red-500' : 'text-emerald-500'}`}>
+                <span className={`text-sm font-bold shrink-0 ${(tx.type || 'expense') === 'expense' ? 'text-red-500' : 'text-emerald-500'}`}>
                   {(tx.type || 'expense') === 'expense' ? '-' : '+'}{formatCurrency(Number(tx.amount))}
                 </span>
+              </div>
+              
+              <div className={clsx("flex items-center justify-between mt-3 pt-3 border-t", isLight ? "border-slate-100" : "border-slate-700/50")}>
+                <span className={clsx("text-xs font-medium", isLight ? "text-slate-400" : "text-slate-500")}>
+                  {tx.date ? format(new Date(tx.date), 'MMM d, yyyy') : '-'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleEdit(tx)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors">
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(tx.id)} className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-colors">
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -182,8 +191,8 @@ export default function TransactionsPage() {
                 <tr key={tx.id} className={clsx("transition-colors", isLight ? "hover:bg-pink-50" : "hover:bg-slate-800/30")}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${(tx.type || 'expense') === 'expense' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                        {(tx.type || 'expense') === 'expense' ? <ArrowDownRight className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold ${(tx.type || 'expense') === 'expense' ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                        {(tx.type || 'expense') === 'expense' ? 'OUT' : 'IN'}
                       </div>
                       <p className={clsx("text-sm font-medium", isLight ? "text-slate-800" : "text-white")}>{tx.description || 'Untitled'}</p>
                     </div>
@@ -203,9 +212,9 @@ export default function TransactionsPage() {
                     <span className={clsx("text-xs", isLight ? "text-slate-600" : "text-slate-400")}>{tx.date ? format(new Date(tx.date), 'MMM d, yyyy') : '-'}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handleEdit(tx)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDelete(tx.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => handleEdit(tx)} className="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-emerald-500 transition-colors">Edit</button>
+                      <button onClick={() => handleDelete(tx.id)} className="px-2 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-red-500 transition-colors">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -215,19 +224,18 @@ export default function TransactionsPage() {
         </div>
       </div>
 
-      {/* POP-UP MODAL */}
       {modalState && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
           <div className={clsx("rounded-3xl p-6 max-w-sm w-full shadow-2xl transform transition-all border text-center", isLight ? "bg-white border-pink-100" : "bg-slate-900 border-slate-800")}>
             <div className="flex justify-center mb-4">
               {modalState.type === 'success' && (
-                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 shadow-inner">
-                  <CheckCircle className="w-8 h-8" />
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 shadow-inner text-2xl font-bold">
+                  ✓
                 </div>
               )}
               {modalState.type === 'error' && (
-                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-red-500 shadow-inner">
-                  <AlertCircle className="w-8 h-8" />
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center text-red-500 shadow-inner text-2xl font-bold">
+                  !
                 </div>
               )}
             </div>
@@ -283,7 +291,7 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
           const profile = await profilesApi.get(userId);
           await profilesApi.updatePoints(userId, (profile?.points || 0) + 10);
         } catch (pointErr) {}
-        onSuccess('Transaksi berhasil disimpan! Kamu dapat +10 Poin Gen-Z '); 
+        onSuccess('Transaksi berhasil disimpan! Kamu dapat +10 Poin Gen-Z'); 
       }
     } catch (err) { 
       onError('Terjadi kesalahan saat menyimpan transaksi ke database.'); 
@@ -302,7 +310,7 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
       <div className={clsx("border rounded-2xl w-full max-w-lg p-6 shadow-2xl", isLight ? "bg-white border-pink-200" : `${activeStyle.sidebarBg} border-slate-800`)} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className={clsx("text-lg font-bold", isLight ? "text-slate-800" : "text-white")}>{editingId ? 'Edit Transaction' : 'New Transaction'}</h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-red-500 transition-colors font-bold px-2 py-1">X</button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -361,8 +369,6 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
             <label className={labelClass}>Category</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
               <option value="">Uncategorized</option>
-              
-              {/* Logika Dropdown Dinamis */}
               {type === 'expense' 
                 ? Object.keys(AUTO_CATEGORIES).map((catName) => (
                     <option key={catName} value={catName}>{catName}</option>
@@ -371,14 +377,13 @@ function TransactionForm({ userId, editingId, transactions, onClose, onSuccess, 
                     <option key={catName} value={catName}>{catName}</option>
                   ))
               }
-              
             </select>
           </div>
 
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className={clsx("flex-1 py-3 font-medium rounded-xl text-sm transition-all", isLight ? "bg-slate-100 text-slate-700 hover:bg-slate-200" : "bg-slate-800 text-slate-300 hover:bg-slate-700")}>Cancel</button>
             <button type="submit" disabled={saving} className={clsx("flex-1 py-3 font-semibold rounded-xl transition-all text-sm flex items-center justify-center gap-2", activeStyle.solidBg, activeStyle.solidText)}>
-              {saving ? 'Saving...' : <><Check className="w-4 h-4" /> Save</>}
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </form>

@@ -11,7 +11,6 @@ export interface ThemeStyles {
   glow: string;
   activeBorder: string;
   logoGlow: string;
-  // TAMBAHAN CAT TEMBOK BACKGROUND 🎨
   mainBg: string;
   sidebarBg: string;
   headerBg: string;
@@ -56,7 +55,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     body.className = body.className.replace(/\btheme-\S+/g, '');
     body.classList.add(`theme-${theme}`);
     
-    // Sinkronkan background bawaan HTML dengan tema biar ga ada garis putih pas di-scroll
     const style = THEME_STYLES[theme] || THEME_STYLES.default;
     // Mengambil kode hex asli dari string class jika memungkinkan
     const bgMatch = style.mainBg.match(/bg-\[(#[a-fA-F0-9]+)\]/);
