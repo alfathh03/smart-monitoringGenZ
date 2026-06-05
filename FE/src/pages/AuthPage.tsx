@@ -107,15 +107,28 @@ export default function AuthPage() {
       {/* =========================================
           PANEL KANAN - FORM LOGIN & REGISTER
       ========================================= */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12 relative bg-slate-950">
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-12 relative bg-slate-950 overflow-y-auto">
         
-        {/* Header Mobile (Hanya muncul di HP) */}
-        <div className="lg:hidden text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-emerald-500/20">
-            <Wallet className="w-7 h-7 text-slate-900" />
+        {/* Gambar Ilustrasi Realistis Atas Login (Responsif) */}
+        <div className="w-full max-w-md mb-6 relative rounded-3xl overflow-hidden border border-slate-800 shadow-2xl group shrink-0">
+          <img
+            src="https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=800&auto=format&fit=crop"
+            alt="Fintech Lifestyle"
+            className="w-full h-40 sm:h-48 object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+          {/* Efek Gradient Gelap di atas gambar agar menyatu dengan background */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent"></div>
+
+          {/* Teks Logo khusus Mobile yang menimpa gambar agar elegan */}
+          <div className="absolute bottom-5 left-0 w-full px-6 flex items-center gap-3 lg:hidden">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center shadow-lg shrink-0">
+              <Wallet className="w-6 h-6 text-slate-900" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white tracking-tight drop-shadow-md">SmartBudget</h1>
+              <p className="text-emerald-400 text-xs font-medium drop-shadow-md">Gen Z Fintech Revolution</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">SmartBudget</h1>
-          <p className="text-emerald-400 mt-2 text-sm font-medium">Gen Z Fintech Revolution</p>
         </div>
 
         {/* Kotak Form */}
@@ -231,10 +244,9 @@ export default function AuthPage() {
           </button>
         </div>
         
-        {/* Footer Credit */}
-        <p className="text-center text-xs text-slate-600 mt-8">
-          Institut Teknologi Nasional Malang &copy; 2026<br/>
-          Built with React, Supabase & Large Language Models
+        {/* Footer Credit Diperbarui */}
+        <p className="text-center text-xs font-medium text-slate-500 mt-8">
+          &copy; {new Date().getFullYear()} Tim Capstone Dicoding
         </p>
 
       </div>
