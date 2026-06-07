@@ -13,7 +13,12 @@ export default function AuthPage() {
   const [success, setSuccess] = useState('');
 
   // Referensi untuk fitur scroll ke bawah
+  const loginSectionRef = useRef<HTMLDivElement>(null);
   const aboutSectionRef = useRef<HTMLDivElement>(null);
+
+  const scrollToLogin = () => {
+    loginSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const scrollToAbout = () => {
     aboutSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,12 +57,13 @@ export default function AuthPage() {
     <div className="bg-slate-950 font-sans selection:bg-emerald-500/30 overflow-x-hidden text-slate-100">
       
       {/* =========================================
-          HERO SECTION (LAYAR TERBELAH 100vh)
+          HERO SECTION (LAYAR TERBELAH / ONBOARDING MOBILE)
       ========================================= */}
       <div className="flex flex-col lg:flex-row min-h-screen">
 
-        {/* --- PANEL KIRI (GAMBAR & TOMBOL ABOUT) --- */}
-        <div className="relative w-full lg:w-1/2 h-[40vh] lg:h-screen flex flex-col justify-center p-8 lg:p-16 shrink-0 group border-r border-slate-800/50">
+        {/* --- PANEL KIRI (GAMBAR & TOMBOL WELCOME) --- */}
+        {/* Diubah menjadi min-h-screen agar di HP tampil full 1 layar penuh sebagai Onboarding */}
+        <div className="relative w-full lg:w-1/2 min-h-screen flex flex-col justify-center p-8 lg:p-16 shrink-0 group border-r border-slate-800/50">
           {/* Gambar Background Bertema Finansial Gelap */}
           <img 
             src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=1000&auto=format&fit=crop" 
@@ -70,40 +76,61 @@ export default function AuthPage() {
 
           {/* Konten Kiri */}
           <div className="relative z-10 mt-12 lg:mt-0">
-            <h2 className="text-3xl lg:text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-md leading-tight">
+            {/* Logo Khusus Mobile Onboarding */}
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/20 lg:hidden">
+              <Wallet className="w-7 h-7 text-slate-900" />
+            </div>
+
+            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-md leading-tight">
               Kelola <span className="text-emerald-400">Keuangan</span><br />Anda dengan Cerdas.
             </h2>
-            <p className="text-slate-300 mb-8 max-w-md lg:text-lg drop-shadow-md leading-relaxed">
+            <p className="text-slate-300 mb-10 max-w-md lg:text-lg drop-shadow-md leading-relaxed">
               Tinggalkan metode pencatatan manual. Sistem analitik terpadu kami hadir untuk membantu Anda merencanakan masa depan finansial yang lebih tertata dan terukur.
             </p>
             
-            {/* Tombol Menuju About (Scroll Down) */}
-            <button 
-              onClick={scrollToAbout}
-              className="group/btn flex items-center gap-3 bg-slate-900/50 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 text-white px-6 py-3 rounded-full font-medium transition-all duration-300 w-fit shadow-xl"
-            >
-              Pelajari Fitur Sistem
-              <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-slate-900 group-hover/btn:translate-y-1 transition-transform">
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </button>
+            {/* Grup Tombol (Tersusun ke bawah di HP, ke samping di Laptop) */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              
+              {/* Tombol Mulai Login (Hanya muncul di Mobile) */}
+              <button 
+                onClick={scrollToLogin}
+                className="lg:hidden group/btn flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:opacity-90 text-white px-6 py-3.5 rounded-full font-bold transition-all w-full shadow-lg shadow-emerald-500/20 active:scale-95"
+              >
+                Mulai Login / Daftar
+                <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
+              </button>
+
+              {/* Tombol Menuju About */}
+              <button 
+                onClick={scrollToAbout}
+                className="group/btn flex items-center justify-center gap-3 bg-slate-900/50 hover:bg-slate-800/80 backdrop-blur-md border border-slate-700/50 text-white px-6 py-3.5 rounded-full font-medium transition-all w-full sm:w-fit shadow-xl active:scale-95"
+              >
+                Pelajari Fitur Sistem
+                <div className="w-7 h-7 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover/btn:translate-y-1 transition-transform">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </button>
+            </div>
           </div>
         </div>
 
 
         {/* --- PANEL KANAN (FORM LOGIN MINIMALIS) --- */}
-        <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 relative bg-slate-950">
+        {/* Diberi ref dan min-h-screen agar menjadi layar kedua di HP */}
+        <div ref={loginSectionRef} className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-8 lg:p-12 relative bg-slate-950 min-h-screen lg:min-h-0">
           
           <div className="w-full max-w-md">
             
-            {/* Header (Logo & Nama Aplikasi) */}
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+            {/* Header (Logo & Nama Aplikasi) - Disembunyikan logonya di HP karena sudah ada di onboarding atas */}
+            <div className="text-center mb-8">
+              <div className="hidden lg:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
                 <Wallet className="w-7 h-7 text-slate-900" />
               </div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">SmartBudget</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+                {isLogin ? 'Masuk ke Akun' : 'Buat Akun Baru'}
+              </h1>
               <p className="text-slate-400 mt-2 font-medium text-sm">
-                {isLogin ? 'Selamat datang kembali' : 'Buat akun SmartBudget Anda'}
+                {isLogin ? 'Selamat datang kembali di SmartBudget' : 'Bergabunglah bersama Gen Z cerdas lainnya'}
               </p>
             </div>
 
@@ -117,7 +144,7 @@ export default function AuthPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-slate-900/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-900/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm"
                     placeholder="anda@email.com"
                     required
                   />
@@ -135,7 +162,7 @@ export default function AuthPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3 bg-slate-900/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm"
+                    className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm"
                     placeholder="Minimal 6 karakter"
                     required
                     minLength={6}
@@ -166,7 +193,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3.5 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-emerald-500/20 text-sm"
+                className="w-full py-4 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-emerald-500/20 text-sm"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -177,7 +204,7 @@ export default function AuthPage() {
             </form>
 
             {/* Pemisah "OR" */}
-            <div className="relative my-6">
+            <div className="relative my-8">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
               <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="px-4 bg-slate-950 text-slate-500">atau</span></div>
             </div>
@@ -187,14 +214,14 @@ export default function AuthPage() {
               onClick={handleGoogleLogin}
               disabled={loading}
               type="button"
-              className="w-full py-3 bg-slate-900 border border-slate-800 text-slate-300 font-medium text-sm rounded-xl hover:bg-slate-800 transition-all focus:outline-none flex items-center justify-center gap-3 active:scale-[0.98]"
+              className="w-full py-3.5 bg-slate-900 border border-slate-800 text-slate-300 font-medium text-sm rounded-xl hover:bg-slate-800 transition-all focus:outline-none flex items-center justify-center gap-3 active:scale-[0.98]"
             >
               <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4" />
               Lanjutkan dengan Google
             </button>
 
-            {/* Toggler Register / Login ala Gambar Mockup */}
-            <div className="mt-6 text-center text-xs text-slate-400">
+            {/* Toggler Register / Login */}
+            <div className="mt-8 text-center text-xs text-slate-400">
               {isLogin ? "Belum memiliki akun? " : "Sudah memiliki akun? "}
               <button 
                 onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }} 
@@ -204,8 +231,8 @@ export default function AuthPage() {
               </button>
             </div>
 
-            {/* Footer */}
-            <p className="text-center text-[10px] font-medium text-slate-600 mt-8">
+            {/* Footer Form Mobile */}
+            <p className="text-center text-[10px] font-medium text-slate-600 mt-10 lg:hidden">
               &copy; {new Date().getFullYear()} Tim Capstone Dicoding
             </p>
 
@@ -270,6 +297,11 @@ export default function AuthPage() {
         >
           Kembali ke Atas
         </button>
+        
+        {/* Footer Desktop */}
+        <p className="hidden lg:block text-center text-[10px] font-medium text-slate-600 mt-16">
+          &copy; {new Date().getFullYear()} Tim Capstone Dicoding
+        </p>
 
       </div>
 
