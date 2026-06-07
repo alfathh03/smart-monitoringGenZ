@@ -56,20 +56,24 @@ export default function AuthPage() {
     <div className="bg-slate-950 font-sans selection:bg-blue-500/30 overflow-x-hidden text-slate-100">
       <div className="flex flex-col lg:flex-row min-h-screen">
         <div className="relative w-full lg:w-1/2 min-h-screen flex flex-col justify-center p-8 lg:p-16 shrink-0 group border-r border-slate-800/50">
+          
           <img 
-            src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000&auto=format&fit=crop" 
-            alt="Analytics Graph Dashboard" 
+            src="https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?q=80&w=1000&auto=format&fit=crop" 
+            alt="Premium Dark Analytics Background" 
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40 mix-blend-multiply"></div>
-          <div className="absolute inset-0 bg-slate-900/40"></div>
+          <div className="absolute inset-0 bg-blue-900/20"></div>
+
+          <div className="absolute top-8 left-8 lg:top-12 lg:left-12 z-20 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-xl">
+              <Wallet className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white tracking-tight drop-shadow-md">SmartBudget</span>
+          </div>
 
           <div className="relative z-10 mt-12 lg:mt-0">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20 lg:hidden">
-              <Wallet className="w-7 h-7 text-slate-900" />
-            </div>
-
-            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-md leading-tight">
+            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4 tracking-tight drop-shadow-md leading-tight mt-12 lg:mt-0">
               Kelola <span className="text-blue-400">Keuangan</span><br />Anda dengan Cerdas.
             </h2>
             <p className="text-slate-300 mb-10 max-w-md lg:text-lg drop-shadow-md leading-relaxed">
