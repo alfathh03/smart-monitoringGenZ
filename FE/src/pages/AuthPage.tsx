@@ -66,9 +66,9 @@ export default function AuthPage() {
         <div className="relative w-full lg:w-1/2 min-h-screen flex flex-col justify-center p-8 lg:p-16 shrink-0 group border-r border-slate-800/50">
           {/* Gambar Background Bertema Finansial Gelap */}
           <img 
-            src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=1000&auto=format&fit=crop" 
-            alt="Financial Dashboard" 
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=1000&auto=format&fit=crop" 
+  alt="Financial Dashboard" 
+  className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           />
           {/* Overlay Gradient Gelap bernuansa Emerald */}
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40 mix-blend-multiply"></div>
