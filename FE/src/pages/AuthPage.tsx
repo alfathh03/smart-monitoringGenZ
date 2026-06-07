@@ -58,8 +58,8 @@ export default function AuthPage() {
         <div className="relative w-full lg:w-1/2 min-h-screen flex flex-col justify-center p-8 lg:p-16 shrink-0 group border-r border-slate-800/50">
           
           <img 
-            src="https://images.unsplash.com/photo-1614028674026-a65e31bfd27c?q=80&w=1000&auto=format&fit=crop" 
-            alt="Premium Dark Analytics Background" 
+            src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1000&auto=format&fit=crop" 
+            alt="Professional Finance Dashboard" 
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40 mix-blend-multiply"></div>
@@ -118,7 +118,7 @@ export default function AuthPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5 pl-1">Alamat Email</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 pl-1">Alamat Email</label>
                 <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
                   <input
@@ -133,10 +133,7 @@ export default function AuthPage() {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5 pl-1">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Kata Sandi</label>
-                  {isLogin && <a href="#" className="text-[11px] font-medium text-emerald-500 hover:text-emerald-400">Lupa sandi?</a>}
-                </div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 pl-1">Kata Sandi</label>
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
                   <input
@@ -156,6 +153,16 @@ export default function AuthPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                
+                {isLogin && (
+                  <div className="flex items-center justify-between mt-3 pl-1 pr-1">
+                    <label className="flex items-center gap-2 cursor-pointer group/check">
+                      <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-900/50 text-emerald-500 focus:ring-emerald-500/50 transition-colors cursor-pointer" />
+                      <span className="text-xs font-medium text-slate-400 group-hover/check:text-slate-300 transition-colors">Ingat saya</span>
+                    </label>
+                    <a href="#" className="text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors">Lupa sandi?</a>
+                  </div>
+                )}
               </div>
 
               {error && (
@@ -173,7 +180,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 mt-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-emerald-500/20 text-sm"
+                className="w-full py-4 mt-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-xl hover:opacity-90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] shadow-lg shadow-emerald-500/20 text-sm"
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -181,9 +188,14 @@ export default function AuthPage() {
                   <>{isLogin ? 'Masuk ke Sistem' : 'Daftar Akun'} <ArrowRight className="w-4 h-4" /></>
                 )}
               </button>
+
+              <div className="flex items-center justify-center gap-1.5 mt-3 text-slate-500">
+                <Lock className="w-3 h-3" />
+                <span className="text-[10px] font-medium">Data dilindungi enkripsi tingkat lanjut</span>
+              </div>
             </form>
 
-            <div className="relative my-8">
+            <div className="relative my-6">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
               <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="px-4 bg-slate-950 text-slate-500">atau</span></div>
             </div>
@@ -267,7 +279,7 @@ export default function AuthPage() {
         </button>
         
         <p className="hidden lg:block text-center text-[10px] font-medium text-slate-600 mt-16">
-          &copy; {new Date().getFullYear()} Tim Capstone Dicoding 2026
+          &copy; {new Date().getFullYear()} Tim Capstone Dicoding
         </p>
       </div>
     </div>
