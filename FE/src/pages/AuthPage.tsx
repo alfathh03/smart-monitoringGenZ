@@ -267,7 +267,7 @@ export default function AuthPage() {
         </button>
         
         <p className="hidden lg:block text-center text-[10px] font-medium text-slate-600 mt-16">
-          &copy; {new Date().getFullYear()} Tim Capstone Dicoding
+          &copy; {new Date().getFullYear()} Tim Capstone Dicoding 2026
         </p>
       </div>
     </div>
