@@ -1,10 +1,13 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth'; 
-import { Wallet, Mail, Lock, ArrowRight, Eye, EyeOff, TrendingUp, ScanLine, BrainCircuit, ChevronDown } from 'lucide-react';
+import { supabase } from '../lib/supabase'; 
+import { Wallet, Mail, Lock, ArrowRight, Eye, EyeOff, TrendingUp, ScanLine, BrainCircuit, ChevronDown, ArrowLeft } from 'lucide-react';
 
 export default function AuthPage() {
   const { signIn, signUp, signInWithGoogle } = useAuth();
+  
   const [isLogin, setIsLogin] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,15 +32,29 @@ export default function AuthPage() {
     setSuccess('');
     setLoading(true);
 
-    const fn = isLogin ? signIn : signUp;
-    const { error } = await fn(email, password);
+    if (isForgotPassword) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`, 
+      });
 
-    if (error) {
-      setError(error);
-    } else if (!isLogin) {
-      setSuccess('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi.');
-      setIsLogin(true);
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccess('Link reset kata sandi telah dikirim ke email Anda! Silakan cek kotak masuk atau spam.');
+        setEmail('');
+      }
+    } else {
+      const fn = isLogin ? signIn : signUp;
+      const { error } = await fn(email, password);
+
+      if (error) {
+        setError(error);
+      } else if (!isLogin) {
+        setSuccess('Pendaftaran berhasil! Silakan periksa email Anda untuk verifikasi.');
+        setIsLogin(true);
+      }
     }
+    
     setLoading(false);
   };
 
@@ -109,10 +126,14 @@ export default function AuthPage() {
                 <Wallet className="w-7 h-7 text-slate-900" />
               </div>
               <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
-                {isLogin ? 'Masuk ke Akun' : 'Buat Akun Baru'}
+                {isForgotPassword ? 'Reset Kata Sandi' : isLogin ? 'Masuk ke Akun' : 'Buat Akun Baru'}
               </h1>
               <p className="text-slate-400 mt-2 font-medium text-sm">
-                {isLogin ? 'Selamat datang kembali di SmartBudget' : 'Bergabunglah bersama Gen Z cerdas lainnya'}
+                {isForgotPassword 
+                  ? 'Masukkan email Anda dan kami akan mengirimkan link reset.' 
+                  : isLogin 
+                    ? 'Selamat datang kembali di SmartBudget' 
+                    : 'Bergabunglah bersama Gen Z cerdas lainnya'}
               </p>
             </div>
 
@@ -132,38 +153,46 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 pl-1">Kata Sandi</label>
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm"
-                    placeholder="Minimal 6 karakter"
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                
-                {isLogin && (
-                  <div className="flex items-center justify-between mt-3 pl-1 pr-1">
-                    <label className="flex items-center gap-2 cursor-pointer group/check">
-                      <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-900/50 text-emerald-500 focus:ring-emerald-500/50 transition-colors cursor-pointer" />
-                      <span className="text-xs font-medium text-slate-400 group-hover/check:text-slate-300 transition-colors">Ingat saya</span>
-                    </label>
-                    <a href="#" className="text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors">Lupa sandi?</a>
+              {!isForgotPassword && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 pl-1">Kata Sandi</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-12 pr-12 py-3.5 bg-slate-900/50 border border-slate-800 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all text-sm"
+                      placeholder="Minimal 6 karakter"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-emerald-400 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
-                )}
-              </div>
+                  
+                  {isLogin && (
+                    <div className="flex items-center justify-between mt-3 pl-1 pr-1">
+                      <label className="flex items-center gap-2 cursor-pointer group/check">
+                        <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-900/50 text-emerald-500 focus:ring-emerald-500/50 transition-colors cursor-pointer" />
+                        <span className="text-xs font-medium text-slate-400 group-hover/check:text-slate-300 transition-colors">Ingat saya</span>
+                      </label>
+                      <button 
+                        type="button" 
+                        onClick={() => { setIsForgotPassword(true); setError(''); setSuccess(''); }} 
+                        className="text-xs font-medium text-emerald-500 hover:text-emerald-400 transition-colors"
+                      >
+                        Lupa sandi?
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {error && (
                 <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs animate-in fade-in">
@@ -185,40 +214,58 @@ export default function AuthPage() {
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <>{isLogin ? 'Masuk ke Sistem' : 'Daftar Akun'} <ArrowRight className="w-4 h-4" /></>
+                  <>
+                    {isForgotPassword ? 'Kirim Link Reset' : isLogin ? 'Masuk ke Sistem' : 'Daftar Akun'} 
+                    <ArrowRight className="w-4 h-4" />
+                  </>
                 )}
               </button>
 
-              <div className="flex items-center justify-center gap-1.5 mt-3 text-slate-500">
-                <Lock className="w-3 h-3" />
-                <span className="text-[10px] font-medium">Data dilindungi enkripsi tingkat lanjut</span>
-              </div>
+              {isForgotPassword ? (
+                <button 
+                  type="button"
+                  onClick={() => { setIsForgotPassword(false); setError(''); setSuccess(''); }}
+                  className="w-full flex items-center justify-center gap-1.5 mt-4 text-slate-400 hover:text-white transition-colors text-xs font-medium"
+                >
+                  <ArrowLeft className="w-3 h-3" />
+                  Kembali ke halaman Login
+                </button>
+              ) : (
+                <div className="flex items-center justify-center gap-1.5 mt-3 text-slate-500">
+                  <Lock className="w-3 h-3" />
+                  <span className="text-[10px] font-medium">Data dilindungi enkripsi tingkat lanjut</span>
+                </div>
+              )}
             </form>
 
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
-              <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="px-4 bg-slate-950 text-slate-500">atau</span></div>
-            </div>
+            {!isForgotPassword && (
+              <>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
+                  <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="px-4 bg-slate-950 text-slate-500">atau</span></div>
+                </div>
 
-            <button
-              onClick={handleGoogleLogin}
-              disabled={loading}
-              type="button"
-              className="w-full py-3.5 bg-slate-900 border border-slate-800 text-slate-300 font-medium text-sm rounded-xl hover:bg-slate-800 transition-all focus:outline-none flex items-center justify-center gap-3 active:scale-[0.98]"
-            >
-              <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4" />
-              Lanjutkan dengan Google
-            </button>
+                <button
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  type="button"
+                  className="w-full py-3.5 bg-slate-900 border border-slate-800 text-slate-300 font-medium text-sm rounded-xl hover:bg-slate-800 transition-all focus:outline-none flex items-center justify-center gap-3 active:scale-[0.98]"
+                >
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-4 h-4" />
+                  Lanjutkan dengan Google
+                </button>
 
-            <div className="mt-8 text-center text-xs text-slate-400">
-              {isLogin ? "Belum memiliki akun? " : "Sudah memiliki akun? "}
-              <button 
-                onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }} 
-                className="text-emerald-400 font-semibold hover:text-emerald-300 underline underline-offset-4"
-              >
-                {isLogin ? "Daftar di sini" : "Masuk di sini"}
-              </button>
-            </div>
+                <div className="mt-8 text-center text-xs text-slate-400">
+                  {isLogin ? "Belum memiliki akun? " : "Sudah memiliki akun? "}
+                  <button 
+                    onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); }} 
+                    className="text-emerald-400 font-semibold hover:text-emerald-300 underline underline-offset-4"
+                  >
+                    {isLogin ? "Daftar di sini" : "Masuk di sini"}
+                  </button>
+                </div>
+              </>
+            )}
 
             <p className="text-center text-[10px] font-medium text-slate-600 mt-10 lg:hidden">
               &copy; {new Date().getFullYear()} Tim Capstone Dicoding
