@@ -9,6 +9,7 @@ import AnomalyPage from './pages/AnomalyPage';
 import ScannerPage from './pages/ScannerPage';
 import InsightsPage from './pages/InsightsPage';
 import GamificationPage from './pages/GamificationPage';
+import UpdatePassword from './pages/UpdatePassword'; 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -49,6 +50,10 @@ function App() {
           <Routes>
             {/* Rute Publik: Hanya bisa diakses kalau BELUM login */}
             <Route path="/auth" element={<PublicRoute><AuthPage /></PublicRoute>} />
+            
+            {/* Rute Reset Sandi: Berdiri sendiri tanpa wrapper public/protected */}
+            {/* Karena klik link email otomatis memberikan temporary session */}
+            <Route path="/update-password" element={<UpdatePassword />} />
             
             {/* Rute Terlindungi: WAJIB login. Dibungkus dengan Layout utama */}
             <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
